@@ -1,23 +1,9 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
-const MOCK_MODE = true; // set to false once the backend API is running
 
 const categories = ["Client", "Vendor", "Interview", "Delivery", "Internal Guest"];
-
-const hosts = [
-  { id: 101, name: "Koketso Boipelo", department: "IT/SQL Development" },
-  { id: 102, name: "Lebo Khan", department: "IT" },
-  { id: 103, name: "David Mokoena", department: "Operations" },
-];
-
-const locations = [
-  { id: 1, name: "Board Room" },
-  { id: 2, name: "Conference Room A" },
-  { id: 3, name: "Conference Room B" },
-  { id: 4, name: "Meeting Room 1" },
-];
 
 const emptyVisitor = {
   fullName: "",
@@ -118,7 +104,14 @@ function VisitorCard({ index, visitor, onChange, onRemove, canRemove, errors }) 
   );
 }
 
-function SuccessScreen({ meetingId, onNewRegistration }) {
+function SuccessScreen({ meetingId, checkInTime, onNewRegistration }) {
+  const timeString = checkInTime
+    ? checkInTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+    : "";
+  const dateString = checkInTime
+    ? checkInTime.toLocaleDateString([], { day: "numeric", month: "long", year: "numeric" })
+    : "";
+
   return (
     <div className="mx-auto max-w-md text-center">
       <div className="rounded-xl bg-white p-8 shadow-sm">
@@ -128,10 +121,23 @@ function SuccessScreen({ meetingId, onNewRegistration }) {
           </svg>
         </div>
         <h2 className="mb-2 text-xl font-semibold text-brand-dark">Registration Successful</h2>
-        <p className="mb-1 text-sm text-brand-grey">Your visit has been registered.</p>
-        <p className="mb-6 text-sm text-brand-grey">
-          Meeting ID: <span className="font-semibold text-brand-dark">{meetingId}</span>
-        </p>
+        <p className="mb-4 text-sm text-brand-grey">Your visit has been registered.</p>
+
+        <div className="mb-6 rounded-lg bg-brand-light p-4 text-sm">
+          <div className="mb-2 flex justify-between">
+            <span className="text-brand-grey">Meeting ID</span>
+            <span className="font-semibold text-brand-dark">{meetingId}</span>
+          </div>
+          <div className="mb-2 flex justify-between">
+            <span className="text-brand-grey">Checked In</span>
+            <span className="font-semibold text-brand-dark">{timeString}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-brand-grey">Date</span>
+            <span className="font-semibold text-brand-dark">{dateString}</span>
+          </div>
+        </div>
+
         <p className="mb-6 text-xs text-brand-grey">
           The host has been notified and will be with you shortly.
         </p>
@@ -149,6 +155,10 @@ function SuccessScreen({ meetingId, onNewRegistration }) {
 export default function VmsFrontendStarter() {
   const navigate = useNavigate();
 
+  const [employees, setEmployees] = useState([]);
+  const [locations, setLocations] = useState([]);
+  const [dataLoading, setDataLoading] = useState(true);
+
   const [form, setForm] = useState({
     visitorCategory: "",
     purpose: "",
@@ -160,15 +170,35 @@ export default function VmsFrontendStarter() {
   const [errors, setErrors] = useState({});
   const [submitState, setSubmitState] = useState({ loading: false, success: false, error: "" });
   const [meetingId, setMeetingId] = useState(null);
+  const [checkInTime, setCheckInTime] = useState(null);
+
+  // fetch employees and locations from the API on load
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const [empRes, locRes] = await Promise.all([
+          fetch(`${API_URL}/employees`),
+          fetch(`${API_URL}/locations`),
+        ]);
+        if (empRes.ok) setEmployees(await empRes.json());
+        if (locRes.ok) setLocations(await locRes.json());
+      } catch (err) {
+        console.error("Could not load data from server:", err);
+      } finally {
+        setDataLoading(false);
+      }
+    }
+    loadData();
+  }, []);
 
   const hostOptions = useMemo(
-    () => hosts.map((h) => ({ value: String(h.id), label: `${h.name} - ${h.department}` })),
-    []
+    () => employees.map((e) => ({ value: String(e.EmployeeID), label: `${e.FullName} - ${e.Department}` })),
+    [employees]
   );
 
   const locationOptions = useMemo(
-    () => locations.map((l) => ({ value: String(l.id), label: l.name })),
-    []
+    () => locations.map((l) => ({ value: String(l.LocationID), label: l.LocationName })),
+    [locations]
   );
 
   const categoryOptions = useMemo(
@@ -246,6 +276,7 @@ export default function VmsFrontendStarter() {
     setErrors({});
     setSubmitState({ loading: false, success: false, error: "" });
     setMeetingId(null);
+    setCheckInTime(null);
   };
 
   const handleSubmit = async (e) => {
@@ -257,11 +288,13 @@ export default function VmsFrontendStarter() {
       return;
     }
 
+    const now = new Date();
     const payload = {
       visitorCategory: form.visitorCategory,
       purpose: form.purpose,
       hostEmployeeId: Number(form.hostEmployeeId),
       locationId: Number(form.locationId),
+      checkInTime: now.toISOString(),
       visitors: form.visitors.map((v) => ({
         fullName: v.fullName,
         contactNum: v.contactNum,
@@ -274,24 +307,18 @@ export default function VmsFrontendStarter() {
     try {
       setSubmitState({ loading: true, success: false, error: "" });
 
-      let resultMeetingId;
+      const response = await fetch(`${API_URL}/meetings`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
 
-      if (MOCK_MODE) {
-        // simulate a short delay like a real API call
-        await new Promise((resolve) => setTimeout(resolve, 800));
-        resultMeetingId = Math.floor(1000 + Math.random() * 9000);
-      } else {
-        const response = await fetch(`${API_URL}/visitors`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        if (!response.ok) throw new Error("Failed to submit registration.");
-        const result = await response.json();
-        resultMeetingId = result.meetingId;
-      }
+      if (!response.ok) throw new Error("Failed to submit registration.");
 
-      setMeetingId(resultMeetingId);
+      const result = await response.json();
+
+      setMeetingId(result.meetingId);
+      setCheckInTime(now);
       setSubmitState({ loading: false, success: true, error: "" });
     } catch (err) {
       setSubmitState({
@@ -313,7 +340,7 @@ export default function VmsFrontendStarter() {
               <p className="text-xs text-gray-400">Your visit has been registered.</p>
             </div>
           </div>
-          <SuccessScreen meetingId={meetingId} onNewRegistration={resetForm} />
+          <SuccessScreen meetingId={meetingId} checkInTime={checkInTime} onNewRegistration={resetForm} />
           <p className="mt-6 text-center text-xs text-gray-400">Mphatek Visitor Management System</p>
         </div>
       </div>
@@ -339,88 +366,94 @@ export default function VmsFrontendStarter() {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        {dataLoading ? (
+          <div className="rounded-xl bg-white p-8 text-center shadow-sm">
+            <p className="text-sm text-brand-grey">Loading form data...</p>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-6">
 
-          {/* Meeting Details */}
-          <div className="rounded-xl bg-white p-6 shadow-sm">
-            <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-brand-grey">
-              Meeting Details
-            </h2>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div>
-                <SelectField label="Visitor Category" name="visitorCategory" value={form.visitorCategory} onChange={handleChange} options={categoryOptions} required placeholder="Select category" />
-                {errors.visitorCategory && <p className="mt-1 text-xs text-red-600">{errors.visitorCategory}</p>}
-              </div>
-              <div>
-                <InputField label="Purpose of Visit" name="purpose" value={form.purpose} onChange={handleChange} required placeholder="Enter purpose" />
-                {errors.purpose && <p className="mt-1 text-xs text-red-600">{errors.purpose}</p>}
-              </div>
-              <div>
-                <SelectField label="Person to Meet" name="hostEmployeeId" value={form.hostEmployeeId} onChange={handleChange} options={hostOptions} required placeholder="Select employee" />
-                {errors.hostEmployeeId && <p className="mt-1 text-xs text-red-600">{errors.hostEmployeeId}</p>}
-              </div>
-              <div>
-                <SelectField label="Meeting Location" name="locationId" value={form.locationId} onChange={handleChange} options={locationOptions} required placeholder="Select location" />
-                {errors.locationId && <p className="mt-1 text-xs text-red-600">{errors.locationId}</p>}
+            {/* Meeting Details */}
+            <div className="rounded-xl bg-white p-6 shadow-sm">
+              <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-brand-grey">
+                Meeting Details
+              </h2>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div>
+                  <SelectField label="Visitor Category" name="visitorCategory" value={form.visitorCategory} onChange={handleChange} options={categoryOptions} required placeholder="Select category" />
+                  {errors.visitorCategory && <p className="mt-1 text-xs text-red-600">{errors.visitorCategory}</p>}
+                </div>
+                <div>
+                  <InputField label="Purpose of Visit" name="purpose" value={form.purpose} onChange={handleChange} required placeholder="Enter purpose" />
+                  {errors.purpose && <p className="mt-1 text-xs text-red-600">{errors.purpose}</p>}
+                </div>
+                <div>
+                  <SelectField label="Person to Meet" name="hostEmployeeId" value={form.hostEmployeeId} onChange={handleChange} options={hostOptions} required placeholder="Select employee" />
+                  {errors.hostEmployeeId && <p className="mt-1 text-xs text-red-600">{errors.hostEmployeeId}</p>}
+                </div>
+                <div>
+                  <SelectField label="Meeting Location" name="locationId" value={form.locationId} onChange={handleChange} options={locationOptions} required placeholder="Select location" />
+                  {errors.locationId && <p className="mt-1 text-xs text-red-600">{errors.locationId}</p>}
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Visitors */}
-          <div className="rounded-xl bg-white p-6 shadow-sm">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-brand-grey">
-                Visitors ({form.visitors.length})
-              </h2>
+            {/* Visitors */}
+            <div className="rounded-xl bg-white p-6 shadow-sm">
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-brand-grey">
+                  Visitors ({form.visitors.length})
+                </h2>
+                <button
+                  type="button"
+                  onClick={addVisitor}
+                  className="rounded-lg bg-brand-blue px-4 py-2 text-xs font-semibold text-white hover:bg-blue-500"
+                >
+                  + Add Visitor
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {form.visitors.map((visitor, index) => (
+                  <VisitorCard
+                    key={index}
+                    index={index}
+                    visitor={visitor}
+                    onChange={handleVisitorChange}
+                    onRemove={removeVisitor}
+                    canRemove={form.visitors.length > 1}
+                    errors={errors}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Error Message */}
+            {submitState.error && (
+              <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {submitState.error}
+              </div>
+            )}
+
+            {/* Buttons */}
+            <div className="flex gap-3 justify-end">
               <button
                 type="button"
-                onClick={addVisitor}
-                className="rounded-lg bg-brand-blue px-4 py-2 text-xs font-semibold text-white hover:bg-blue-500"
+                onClick={resetForm}
+                className="rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-medium text-brand-grey hover:bg-gray-50"
               >
-                + Add Visitor
+                Reset
+              </button>
+              <button
+                type="submit"
+                disabled={submitState.loading}
+                className="rounded-lg bg-brand-dark px-5 py-2.5 text-sm font-semibold text-white hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {submitState.loading ? "Submitting..." : "Register"}
               </button>
             </div>
-
-            <div className="space-y-4">
-              {form.visitors.map((visitor, index) => (
-                <VisitorCard
-                  key={index}
-                  index={index}
-                  visitor={visitor}
-                  onChange={handleVisitorChange}
-                  onRemove={removeVisitor}
-                  canRemove={form.visitors.length > 1}
-                  errors={errors}
-                />
-              ))}
-            </div>
-          </div>
-
-          {/* Error Message */}
-          {submitState.error && (
-            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {submitState.error}
-            </div>
-          )}
-
-          {/* Buttons */}
-          <div className="flex gap-3 justify-end">
-            <button
-              type="button"
-              onClick={resetForm}
-              className="rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-medium text-brand-grey hover:bg-gray-50"
-            >
-              Reset
-            </button>
-            <button
-              type="submit"
-              disabled={submitState.loading}
-              className="rounded-lg bg-brand-dark px-5 py-2.5 text-sm font-semibold text-white hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {submitState.loading ? "Submitting..." : "Register"}
-            </button>
-          </div>
-        </form>
+          </form>
+        )}
 
         <p className="mt-6 text-center text-xs text-gray-400">
           Mphatek Visitor Management System

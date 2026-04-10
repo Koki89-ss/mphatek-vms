@@ -2,10 +2,10 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import QRCode from "react-qr-code";
 
-const registrationUrl = `${process.env.REACT_APP_BASE_URL || "http://localhost:3000"}/visitor-registration`;
-
 function QRPage() {
   const navigate = useNavigate();
+  const baseUrl = process.env.REACT_APP_BASE_URL || "http://localhost:3000";
+  const registrationUrl = `${baseUrl}/visitor-registration`;
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-brand-dark px-4">
@@ -23,17 +23,17 @@ function QRPage() {
           Scan the code below to register your visit.
         </p>
 
-        <div className="mx-auto mb-6 inline-block rounded-xl border border-gray-200 bg-white p-4">
+        <div className="mx-auto mb-4 inline-block rounded-xl border border-gray-200 bg-white p-4">
           <QRCode value={registrationUrl} size={180} />
         </div>
 
-        <p className="text-xs text-brand-grey">
-          Point your phone camera at the QR code to open the registration form.
+        <p className="mb-4 break-all text-xs text-brand-grey">
+          {registrationUrl}
         </p>
 
         <button
           onClick={() => navigate("/visitor-registration")}
-          className="mt-4 w-full rounded-lg bg-brand-blue px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-500"
+          className="mt-2 w-full rounded-lg bg-brand-blue px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-500"
         >
           Open Registration Form
         </button>
