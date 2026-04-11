@@ -163,6 +163,7 @@ export default function VmsFrontendStarter() {
     purpose: "",
     hostEmployeeId: "",
     locationId: "",
+    numberOfVisitors: 1,
     visitors: [{ ...emptyVisitor }],
   });
 
@@ -210,6 +211,18 @@ export default function VmsFrontendStarter() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+
+    if (name === "numberOfVisitors") {
+      const count = Math.max(1, Math.min(20, Number(value) || 1));
+      setForm((prev) => {
+        const visitors = [...prev.visitors];
+        while (visitors.length < count) visitors.push({ ...emptyVisitor });
+        visitors.length = count;
+        return { ...prev, numberOfVisitors: count, visitors };
+      });
+      return;
+    }
+
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -225,6 +238,7 @@ export default function VmsFrontendStarter() {
   const addVisitor = () => {
     setForm((prev) => ({
       ...prev,
+      numberOfVisitors: prev.numberOfVisitors + 1,
       visitors: [...prev.visitors, { ...emptyVisitor }],
     }));
   };
@@ -233,6 +247,7 @@ export default function VmsFrontendStarter() {
     if (form.visitors.length <= 1) return;
     setForm((prev) => ({
       ...prev,
+      numberOfVisitors: prev.numberOfVisitors - 1,
       visitors: prev.visitors.filter((_, i) => i !== index),
     }));
   };
@@ -273,6 +288,7 @@ export default function VmsFrontendStarter() {
       purpose: "",
       hostEmployeeId: "",
       locationId: "",
+      numberOfVisitors: 1,
       visitors: [{ ...emptyVisitor }],
     });
     setErrors({});
@@ -393,6 +409,19 @@ export default function VmsFrontendStarter() {
                   {errors.locationId && <p className="mt-1 text-xs text-red-600">{errors.locationId}</p>}
                 </div>
               </div>
+
+              <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div>
+                  <label className="block text-sm font-medium text-brand-dark">Check-in Time</label>
+                  <input type="text" value={new Date().toLocaleString()} readOnly className="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-brand-grey" />
+                  <p className="mt-1 text-xs text-brand-grey">Recorded on submission</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-brand-dark">Check-out Time</label>
+                  <input type="text" value="To be recorded by reception" readOnly className="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-brand-grey" />
+                  <p className="mt-1 text-xs text-brand-grey">Managed from admin dashboard</p>
+                </div>
+              </div>
             </div>
 
             {/* Visitors */}
@@ -401,13 +430,18 @@ export default function VmsFrontendStarter() {
                 <h2 className="text-sm font-semibold uppercase tracking-wide text-brand-grey">
                   Visitors ({form.visitors.length})
                 </h2>
-                <button
-                  type="button"
-                  onClick={addVisitor}
-                  className="rounded-lg bg-brand-blue px-4 py-2 text-xs font-semibold text-white hover:bg-blue-500"
-                >
-                  + Add Visitor
-                </button>
+                <div className="flex items-center gap-3">
+                  <div className="w-24">
+                    <InputField label="Count" name="numberOfVisitors" type="number" value={form.numberOfVisitors} onChange={handleChange} />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={addVisitor}
+                    className="mt-6 rounded-lg bg-brand-blue px-4 py-2 text-xs font-semibold text-white hover:bg-blue-500"
+                  >
+                    + Add
+                  </button>
+                </div>
               </div>
 
               <div className="space-y-4">
