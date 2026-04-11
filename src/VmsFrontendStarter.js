@@ -157,7 +157,6 @@ export default function VmsFrontendStarter() {
 
   const [employees, setEmployees] = useState([]);
   const [locations, setLocations] = useState([]);
-  const [dataLoading, setDataLoading] = useState(true);
 
   const [form, setForm] = useState({
     visitorCategory: "",
@@ -172,23 +171,26 @@ export default function VmsFrontendStarter() {
   const [meetingId, setMeetingId] = useState(null);
   const [checkInTime, setCheckInTime] = useState(null);
 
-  // fetch employees and locations from the API on load
   useEffect(() => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+
     async function loadData() {
       try {
         const [empRes, locRes] = await Promise.all([
-          fetch(`${API_URL}/employees`),
-          fetch(`${API_URL}/locations`),
+          fetch(`${API_URL}/employees`, { signal: controller.signal }),
+          fetch(`${API_URL}/locations`, { signal: controller.signal }),
         ]);
         if (empRes.ok) setEmployees(await empRes.json());
         if (locRes.ok) setLocations(await locRes.json());
       } catch (err) {
-        console.error("Could not load data from server:", err);
-      } finally {
-        setDataLoading(false);
+        if (err.name !== "AbortError") console.error("Could not load data from server:", err);
       }
+      clearTimeout(timeout);
     }
     loadData();
+
+    return () => { controller.abort(); clearTimeout(timeout); };
   }, []);
 
   const hostOptions = useMemo(
@@ -366,12 +368,7 @@ export default function VmsFrontendStarter() {
           </button>
         </div>
 
-        {dataLoading ? (
-          <div className="rounded-xl bg-white p-8 text-center shadow-sm">
-            <p className="text-sm text-brand-grey">Loading form data...</p>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6">
 
             {/* Meeting Details */}
             <div className="rounded-xl bg-white p-6 shadow-sm">
@@ -453,7 +450,6 @@ export default function VmsFrontendStarter() {
               </button>
             </div>
           </form>
-        )}
 
         <p className="mt-6 text-center text-xs text-gray-400">
           Mphatek Visitor Management System

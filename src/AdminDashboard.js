@@ -34,7 +34,6 @@ export default function AdminDashboard() {
   const navigate = useNavigate();
   const [stats, setStats] = useState({ todayTotal: 0, checkedIn: 0, completed: 0, overstayed: 0 });
   const [meetings, setMeetings] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState(null);
   const [visitors, setVisitors] = useState({});
   const [filterStatus, setFilterStatus] = useState("");
@@ -124,21 +123,9 @@ export default function AdminDashboard() {
   }
 
   useEffect(() => {
-    async function init() {
-      setLoading(true);
-      await Promise.all([loadStats(), loadMeetings()]);
-      setLoading(false);
-    }
-    init();
+    loadStats();
+    loadMeetings();
   }, [loadMeetings]);
-
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-brand-light">
-        <p className="text-sm text-brand-grey">Loading dashboard...</p>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-brand-light px-4 py-6">
