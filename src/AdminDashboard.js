@@ -279,6 +279,7 @@ export default function AdminDashboard() {
                                     <div className="text-brand-grey">{v.ContactNum}</div>
                                     <div className="text-brand-grey">{v.OrganizationName}</div>
                                     {v.VehicleNum && <div className="text-brand-grey">Vehicle: {v.VehicleNum}</div>}
+                                    {v.IDProofType && <div className="text-brand-grey">ID: {v.IDProofType} — {v.IDProofNumber}</div>}
                                   </div>
                                 ))}
                               </div>
