@@ -30,7 +30,7 @@ function getDuration(checkIn, checkOut) {
   return `${hours}h ${mins}m`;
 }
 
-export default function AdminDashboard() {
+export default function AdminDashboard({ user, onLogout }) {
   const navigate = useNavigate();
   const [stats, setStats] = useState({ todayTotal: 0, checkedIn: 0, completed: 0, overstayed: 0 });
   const [meetings, setMeetings] = useState([]);
@@ -135,14 +135,20 @@ export default function AdminDashboard() {
         <div className="mb-6 flex items-center gap-4 rounded-xl bg-brand-dark px-6 py-4">
           <img src="/mphatek-logo.png" alt="Mphatek" className="h-10" />
           <div className="flex-1">
-            <h1 className="text-lg font-semibold text-white">Admin Dashboard</h1>
-            <p className="text-xs text-gray-400">Visitor management overview</p>
+            <h1 className="text-lg font-semibold text-white">Welcome, {user?.FullName?.split(" ")[0]}</h1>
+            <p className="text-xs text-gray-400">{user?.Department} — Admin Dashboard</p>
           </div>
           <button
             onClick={() => navigate("/")}
             className="rounded-lg border border-gray-600 px-3 py-1.5 text-xs font-medium text-gray-300 hover:bg-gray-800"
           >
             Back to QR
+          </button>
+          <button
+            onClick={onLogout}
+            className="rounded-lg border border-red-400 px-3 py-1.5 text-xs font-medium text-red-300 hover:bg-red-900/30"
+          >
+            Logout
           </button>
         </div>
 

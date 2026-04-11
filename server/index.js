@@ -5,6 +5,7 @@ const employeesRouter = require("./routes/employees");
 const locationsRouter = require("./routes/locations");
 const meetingsRouter = require("./routes/meetings");
 const dashboardRouter = require("./routes/dashboard");
+const authRouter = require("./routes/auth");
 
 const app = express();
 const PORT = 5000;
@@ -17,6 +18,7 @@ app.use("/api/employees", employeesRouter);
 app.use("/api/locations", locationsRouter);
 app.use("/api/meetings", meetingsRouter);
 app.use("/api/dashboard", dashboardRouter);
+app.use("/api/auth", authRouter);
 
 // health check
 app.get("/api/health", (req, res) => {

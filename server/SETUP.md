@@ -72,3 +72,14 @@ set SMTP_PASS=your-app-password
 For Gmail, you need to create an App Password at https://myaccount.google.com/apppasswords
 
 If SMTP is not configured, the system still works — it just skips sending emails and logs "Skipped" in the Notifications table.
+
+## Admin Dashboard Login
+
+The admin dashboard at `/admin` requires login. Any employee in the Employees table can log in.
+
+- **Email:** The employee's email from the database (e.g. koketso@mphatek.com)
+- **Password:** `Mphatek2026` (shared password for all employees)
+
+The dashboard greets the logged-in user by first name and shows their department.
+
+To change the shared password, edit `SHARED_PASSWORD` in `server/routes/auth.js`.
