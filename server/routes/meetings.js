@@ -1,5 +1,6 @@
 const express = require("express");
 const { sql, getPool } = require("../db");
+const { sendVisitorNotification } = require("../notify");
 const router = express.Router();
 
 // POST /api/meetings - create a meeting with visitors
@@ -45,10 +46,12 @@ router.post("/", async (req, res) => {
         .input("email", sql.NVarChar, v.email || "")
         .input("organizationName", sql.NVarChar, v.organizationName || "")
         .input("vehicleNum", sql.NVarChar, v.vehicleNum || "")
+        .input("idProofType", sql.NVarChar, v.idProofType || "")
+        .input("idProofNumber", sql.NVarChar, v.idProofNumber || "")
         .input("createdDate", sql.DateTime, new Date())
         .query(`
-          INSERT INTO Visitors (MeetingID, FullName, ContactNum, Email, OrganizationName, VehicleNum, CreatedDate)
-          VALUES (@meetingId, @fullName, @contactNum, @email, @organizationName, @vehicleNum, @createdDate)
+          INSERT INTO Visitors (MeetingID, FullName, ContactNum, Email, OrganizationName, VehicleNum, IDProofType, IDProofNumber, CreatedDate)
+          VALUES (@meetingId, @fullName, @contactNum, @email, @organizationName, @vehicleNum, @idProofType, @idProofNumber, @createdDate)
         `);
     }
 
@@ -65,6 +68,30 @@ router.post("/", async (req, res) => {
       `);
 
     await transaction.commit();
+
+    // send notification to host employee (don't block the response)
+    getPool().then((pool) =>
+      pool.request()
+        .input("empId", sql.Int, Number(hostEmployeeId))
+        .input("locId", sql.Int, Number(locationId))
+        .query("SELECT e.Email, e.FullName, l.LocationName FROM Employees e, Locations l WHERE e.EmployeeID = @empId AND l.LocationID = @locId")
+        .then((r) => {
+          if (r.recordset.length > 0) {
+            const row = r.recordset[0];
+            sendVisitorNotification({
+              meetingId,
+              hostEmail: row.Email,
+              hostName: row.FullName,
+              locationName: row.LocationName,
+              purpose: purpose || "",
+              visitors,
+              checkInTime: checkInTime || new Date().toISOString(),
+            });
+          }
+        })
+        .catch((err) => console.error("Notification lookup failed:", err.message))
+    );
+
     res.status(201).json({ meetingId, status: "CheckedIn" });
   } catch (err) {
     if (transaction) {

@@ -5,12 +5,16 @@ const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
 
 const categories = ["Client", "Vendor", "Interview", "Delivery", "Internal Guest"];
 
+const idProofTypes = ["National ID", "Passport", "Driver's License"];
+
 const emptyVisitor = {
   fullName: "",
   contactNum: "",
   email: "",
   organizationName: "",
   vehicleNum: "",
+  idProofType: "",
+  idProofNumber: "",
 };
 
 function isValidEmail(email) {
@@ -98,6 +102,12 @@ function VisitorCard({ index, visitor, onChange, onRemove, canRemove, errors }) 
         </div>
         <div className="md:col-span-2">
           <InputField label="Vehicle Number" name="vehicleNum" value={visitor.vehicleNum} onChange={(e) => onChange(index, e)} placeholder="Optional" />
+        </div>
+        <div>
+          <SelectField label="ID Proof Type" name="idProofType" value={visitor.idProofType} onChange={(e) => onChange(index, e)} options={idProofTypes.map((t) => ({ value: t, label: t }))} placeholder="Optional" />
+        </div>
+        <div>
+          <InputField label="ID Proof Number" name="idProofNumber" value={visitor.idProofNumber} onChange={(e) => onChange(index, e)} placeholder="Optional" />
         </div>
       </div>
     </div>
@@ -319,6 +329,8 @@ export default function VmsFrontendStarter() {
         email: v.email,
         organizationName: v.organizationName,
         vehicleNum: v.vehicleNum || null,
+        idProofType: v.idProofType || null,
+        idProofNumber: v.idProofNumber || null,
       })),
     };
 

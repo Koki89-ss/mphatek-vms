@@ -57,3 +57,18 @@ To find the IP, open Command Prompt on the Windows machine and run `ipconfig`, l
 - Make sure TCP/IP is enabled in SQL Server Configuration Manager > SQL Server Network Configuration > Protocols
 - If the server can't connect, try restarting SQL Server after enabling TCP/IP
 - Make sure Windows Firewall allows port 5000 (or temporarily disable it for testing)
+
+## Email Notifications (Optional)
+
+To enable email notifications when visitors register, set these environment variables before running `npm start`:
+
+```
+set SMTP_HOST=smtp.gmail.com
+set SMTP_PORT=587
+set SMTP_USER=your-email@gmail.com
+set SMTP_PASS=your-app-password
+```
+
+For Gmail, you need to create an App Password at https://myaccount.google.com/apppasswords
+
+If SMTP is not configured, the system still works — it just skips sending emails and logs "Skipped" in the Notifications table.
