@@ -2,7 +2,7 @@
 
 ## Login Flow
 
-# CLICK CNTRL + SHIFT + P
+# CLICK: CNTRL + SHIFT + P
 
 1. Go to `/admin`
 2. Enter your employee email and the shared password
