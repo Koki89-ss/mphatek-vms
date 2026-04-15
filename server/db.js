@@ -4,7 +4,7 @@ const config = {
   server: "DESKTOP-JALOKH3",
   database: "VisitorsManagementSystem",
   user: "visitor_user",
-  password: "Password123!",
+  password: "Mph@t3kV1s1t0r2026",
   options: {
     encrypt: false,
     trustServerCertificate: true,
