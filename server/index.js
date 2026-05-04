@@ -1,3 +1,5 @@
+require("dotenv").config();
+
 const express = require("express");
 const cors = require("cors");
 
@@ -6,11 +8,17 @@ const locationsRouter = require("./routes/locations");
 const meetingsRouter = require("./routes/meetings");
 const dashboardRouter = require("./routes/dashboard");
 const authRouter = require("./routes/auth");
+const receptionRouter = require("./routes/reception");
 
 const app = express();
 const PORT = 5000;
 
-app.use(cors());
+app.use(cors({
+origin: "http://localhost:3000",
+methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+allowedHeaders: ["Content-Type", "Authorization"],
+}));
+
 app.use(express.json());
 
 // routes
@@ -19,6 +27,7 @@ app.use("/api/locations", locationsRouter);
 app.use("/api/meetings", meetingsRouter);
 app.use("/api/dashboard", dashboardRouter);
 app.use("/api/auth", authRouter);
+app.use("/api/reception", receptionRouter);
 
 // health check
 app.get("/api/health", (req, res) => {

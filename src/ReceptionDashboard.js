@@ -3,6 +3,16 @@ import { useNavigate } from "react-router-dom";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
 
+function authHeaders() {
+  try {
+    const saved = localStorage.getItem("vms_user");
+    const user = saved ? JSON.parse(saved) : null;
+    return user?.token ? { Authorization: `Bearer ${user.token}` } : {};
+  } catch {
+    return {};
+  }
+}
+
 function StatCard({ label, value, color }) {
   return (
     <div className="rounded-xl bg-white p-5 shadow-sm">
@@ -30,9 +40,9 @@ function getDuration(checkIn, checkOut) {
   return `${hours}h ${mins}m`;
 }
 
-export default function AdminDashboard({ user, onLogout }) {
+export default function ReceptionDashboard({ user, onLogout }) {
   const navigate = useNavigate();
-  const [stats, setStats] = useState({ todayTotal: 0, checkedIn: 0, completed: 0, overstayed: 0 });
+  const [stats, setStats] = useState({ todayTotal: 0, pending: 0, checkedIn: 0, completed: 0 });
   const [meetings, setMeetings] = useState([]);
   const [expandedId, setExpandedId] = useState(null);
   const [visitors, setVisitors] = useState({});
@@ -41,7 +51,9 @@ export default function AdminDashboard({ user, onLogout }) {
 
   async function loadStats() {
     try {
-      const res = await fetch(`${API_URL}/dashboard/stats`);
+      const res = await fetch(`${API_URL}/reception/stats`, {
+        headers: authHeaders(),
+      });
       if (res.ok) setStats(await res.json());
     } catch (err) {
       console.error("Failed to load stats:", err);
@@ -54,7 +66,9 @@ export default function AdminDashboard({ user, onLogout }) {
       if (filterStatus) params.append("status", filterStatus);
       if (filterDate) params.append("date", filterDate);
 
-      const res = await fetch(`${API_URL}/meetings?${params}`);
+      const res = await fetch(`${API_URL}/reception/meetings?${params}`, {
+        headers: authHeaders(),
+      });
       if (res.ok) setMeetings(await res.json());
     } catch (err) {
       console.error("Failed to load meetings:", err);
@@ -64,25 +78,15 @@ export default function AdminDashboard({ user, onLogout }) {
   async function loadVisitors(meetingId) {
     if (visitors[meetingId]) return;
     try {
-      const res = await fetch(`${API_URL}/meetings/${meetingId}/visitors`);
+      const res = await fetch(`${API_URL}/reception/meetings/${meetingId}/visitors`, {
+        headers: authHeaders(),
+      });
       if (res.ok) {
         const data = await res.json();
         setVisitors((prev) => ({ ...prev, [meetingId]: data }));
       }
     } catch (err) {
       console.error("Failed to load visitors:", err);
-    }
-  }
-
-  async function handleCheckout(meetingId) {
-    try {
-      const res = await fetch(`${API_URL}/meetings/${meetingId}/checkout`, { method: "PUT" });
-      if (res.ok) {
-        loadStats();
-        loadMeetings();
-      }
-    } catch (err) {
-      console.error("Checkout failed:", err);
     }
   }
 
@@ -95,36 +99,15 @@ export default function AdminDashboard({ user, onLogout }) {
     }
   }
 
-  function exportToCSV() {
-    if (meetings.length === 0) return;
-
-    const headers = ["Meeting ID", "Category", "Purpose", "Host", "Department", "Location", "Check In", "Check Out", "Duration", "Status"];
-    const rows = meetings.map((m) => [
-      m.MeetingID,
-      m.VisitorCategory,
-      m.Purpose,
-      m.HostName,
-      m.Department,
-      m.LocationName,
-      m.CheckInTime ? new Date(m.CheckInTime).toLocaleString() : "",
-      m.CheckOutTime ? new Date(m.CheckOutTime).toLocaleString() : "",
-      getDuration(m.CheckInTime, m.CheckOutTime),
-      m.Status,
-    ]);
-
-    const csv = [headers, ...rows].map((row) => row.map((cell) => `"${cell}"`).join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `visitors_${new Date().toISOString().split("T")[0]}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-
+  // Auto refresh every 30 seconds
   useEffect(() => {
     loadStats();
     loadMeetings();
+    const interval = setInterval(() => {
+      loadStats();
+      loadMeetings();
+    }, 30000);
+    return () => clearInterval(interval);
   }, [loadMeetings]);
 
   return (
@@ -135,8 +118,8 @@ export default function AdminDashboard({ user, onLogout }) {
         <div className="mb-6 flex items-center gap-4 rounded-xl bg-brand-dark px-6 py-4">
           <img src="/mphatek-logo.png" alt="Mphatek" className="h-10" />
           <div className="flex-1">
-            <h1 className="text-lg font-semibold text-white">Welcome, {user?.FullName?.split(" ")[0]}</h1>
-            <p className="text-xs text-gray-400">{user?.Department} — Admin Dashboard</p>
+            <h1 className="text-lg font-semibold text-white">Reception Dashboard</h1>
+            <p className="text-xs text-gray-400">All visitor meetings — read only view</p>
           </div>
           <button
             onClick={() => navigate("/")}
@@ -154,13 +137,13 @@ export default function AdminDashboard({ user, onLogout }) {
 
         {/* Stats */}
         <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-4">
-          <StatCard label="Today's Visitors" value={stats.todayTotal} color="text-brand-dark" />
+          <StatCard label="Today's Total" value={stats.todayTotal} color="text-brand-dark" />
+          <StatCard label="Pending" value={stats.pending} color="text-yellow-600" />
           <StatCard label="Checked In" value={stats.checkedIn} color="text-brand-blue" />
           <StatCard label="Completed" value={stats.completed} color="text-green-600" />
-          <StatCard label="Overstayed" value={stats.overstayed} color="text-red-600" />
         </div>
 
-        {/* Filters + Export */}
+        {/* Filters */}
         <div className="mb-4 flex flex-wrap items-center gap-3">
           <select
             value={filterStatus}
@@ -168,6 +151,7 @@ export default function AdminDashboard({ user, onLogout }) {
             className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-brand-blue"
           >
             <option value="">All Statuses</option>
+            <option value="Pending">Pending</option>
             <option value="CheckedIn">Checked In</option>
             <option value="Completed">Completed</option>
           </select>
@@ -190,12 +174,7 @@ export default function AdminDashboard({ user, onLogout }) {
 
           <div className="flex-1" />
 
-          <button
-            onClick={exportToCSV}
-            className="rounded-lg bg-brand-dark px-4 py-2 text-xs font-semibold text-white hover:bg-gray-800"
-          >
-            Export CSV
-          </button>
+          <span className="text-xs text-brand-grey">Auto-refreshes every 30 seconds</span>
         </div>
 
         {/* Meetings Table */}
@@ -213,11 +192,10 @@ export default function AdminDashboard({ user, onLogout }) {
                     <th className="px-4 py-3">Category</th>
                     <th className="px-4 py-3">Host</th>
                     <th className="px-4 py-3">Location</th>
-                    <th className="px-4 py-3">Check In</th>
+                    <th className="px-4 py-3">Arrival</th>
                     <th className="px-4 py-3">Check Out</th>
                     <th className="px-4 py-3">Duration</th>
                     <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -243,7 +221,9 @@ export default function AdminDashboard({ user, onLogout }) {
                         <td className="px-4 py-3">
                           <span
                             className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
-                              m.Status === "CheckedIn"
+                              m.Status === "Pending"
+                                ? "bg-yellow-100 text-yellow-700"
+                                : m.Status === "CheckedIn"
                                 ? "bg-blue-100 text-blue-700"
                                 : m.Status === "Completed"
                                 ? "bg-green-100 text-green-700"
@@ -253,22 +233,12 @@ export default function AdminDashboard({ user, onLogout }) {
                             {m.Status}
                           </span>
                         </td>
-                        <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                          {m.Status === "CheckedIn" && (
-                            <button
-                              onClick={() => handleCheckout(m.MeetingID)}
-                              className="rounded-lg bg-red-50 px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-100"
-                            >
-                              Check Out
-                            </button>
-                          )}
-                        </td>
                       </tr>
 
                       {/* Expanded visitor details */}
                       {expandedId === m.MeetingID && (
                         <tr>
-                          <td colSpan={9} className="bg-gray-50 px-4 py-4">
+                          <td colSpan={8} className="bg-gray-50 px-4 py-4">
                             <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-brand-grey">
                               Visitors for Meeting #{m.MeetingID} — {m.Purpose}
                             </div>
@@ -279,7 +249,7 @@ export default function AdminDashboard({ user, onLogout }) {
                             ) : (
                               <div className="grid gap-3 md:grid-cols-2">
                                 {visitors[m.MeetingID].map((v) => (
-                                  <div key={v.VisitorID} className="rounded-lg border border-gray-200 bg-white p-3 text-xs">
+                                  <div key={v.VistorID} className="rounded-lg border border-gray-200 bg-white p-3 text-xs">
                                     <div className="mb-1 font-semibold text-brand-dark">{v.FullName}</div>
                                     <div className="text-brand-grey">{v.Email}</div>
                                     <div className="text-brand-grey">{v.ContactNum}</div>

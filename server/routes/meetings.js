@@ -1,6 +1,7 @@
 const express = require("express");
 const { sql, getPool } = require("../db");
 const { sendVisitorNotification } = require("../notify");
+const auth = require("../middleware/auth");
 const router = express.Router();
 
 // POST /api/meetings - create a meeting with visitors
@@ -26,7 +27,7 @@ router.post("/", async (req, res) => {
       .input("hostEmployeeId", sql.Int, Number(hostEmployeeId))
       .input("locationId", sql.Int, Number(locationId))
       .input("checkInTime", sql.DateTime, checkInTime ? new Date(checkInTime) : new Date())
-      .input("status", sql.NVarChar, "CheckedIn")
+      .input("status", sql.NVarChar, "Pending")
       .input("createdDate", sql.DateTime, new Date())
       .query(`
         INSERT INTO Meetings (VisitorCategory, Purpose, HostEmployeeID, LocationID, CheckInTime, Status, CreatedDate)
@@ -103,8 +104,9 @@ router.post("/", async (req, res) => {
 });
 
 // GET /api/meetings - list meetings with optional filters
-router.get("/", async (req, res) => {
-  const { status, date, employeeId } = req.query;
+router.get("/", auth, async (req, res) => {
+  const { status, date } = req.query;
+  const employeeId = req.user.employeeId; // from JWT
 
   try {
     const pool = await getPool();
@@ -118,8 +120,12 @@ router.get("/", async (req, res) => {
       FROM Meetings m
       JOIN Employees e ON m.HostEmployeeID = e.EmployeeID
       JOIN Locations l ON m.LocationID = l.LocationID
-      WHERE 1=1
+      WHERE m.HostEmployeeID = @employeeId
+      AND (m.IsDeleted IS NULL OR m.IsDeleted = 0)
     `;
+
+
+    request.input("employeeId", sql.Int, employeeId);
 
     if (status) {
       request.input("status", sql.NVarChar, status);
@@ -131,14 +137,10 @@ router.get("/", async (req, res) => {
       query += " AND CAST(m.CheckInTime AS DATE) = @date";
     }
 
-    if (employeeId) {
-      request.input("employeeId", sql.Int, parseInt(employeeId));
-      query += " AND m.HostEmployeeID = @employeeId";
-    }
-
     query += " ORDER BY m.CheckInTime DESC";
 
     const result = await request.query(query);
+
     res.json(result.recordset);
   } catch (err) {
     console.error("Error fetching meetings:", err);
@@ -147,12 +149,28 @@ router.get("/", async (req, res) => {
 });
 
 // GET /api/meetings/:id/visitors - get visitors for a meeting
-router.get("/:id/visitors", async (req, res) => {
+router.get("/:id/visitors", auth, async (req, res) => {
   try {
     const pool = await getPool();
-    const result = await pool.request()
-      .input("meetingId", sql.Int, parseInt(req.params.id))
+    const meetingId = parseInt(req.params.id);
+
+    const ownerCheck = await pool.request()
+      .input("meetingId", sql.Int, meetingId)
+      .input("employeeId", sql.Int, req.user.employeeId)
+      .query(`
+        SELECT MeetingID FROM Meetings 
+        WHERE MeetingID = @meetingId 
+        AND HostEmployeeID = @employeeId
+      `);
+
+      if (ownerCheck.recordset.length === 0)
+      return res.status(403).json({ error: "Not authorized." });
+
+      const result = await pool.request()
+      .input("meetingId", sql.Int, meetingId)
       .query("SELECT * FROM Visitors WHERE MeetingID = @meetingId");
+
+    
     res.json(result.recordset);
   } catch (err) {
     console.error("Error fetching visitors:", err);
@@ -160,37 +178,101 @@ router.get("/:id/visitors", async (req, res) => {
   }
 });
 
-// PUT /api/meetings/:id/checkout - mark checkout
-router.put("/:id/checkout", async (req, res) => {
+
+//PUT/api/meetings/:id/approve - host approves the meeting
+
+router.put("/:id/approve", auth, async (req, res) => {
   try {
     const pool = await getPool();
-    const now = new Date();
+    const meetingId = parseInt(req.params.id);
 
-    const result = await pool.request()
-      .input("meetingId", sql.Int, parseInt(req.params.id))
-      .input("checkOutTime", sql.DateTime, now)
-      .query(`
-        UPDATE Meetings
-        SET CheckOutTime = @checkOutTime, Status = 'Completed'
-        WHERE MeetingID = @meetingId AND Status = 'CheckedIn'
+    const ownerCheck = await pool.request()
+      .input("meetingId", sql.Int, meetingId)
+      .input("employeeId", sql.Int, req.user.employeeId)
+      .query(`  
+        SELECT MeetingID FROM Meetings
+        WHERE MeetingID = @meetingId
+        AND HostEmployeeID = @employeeId
+        AND Status = 'Pending'
       `);
 
-    if (result.rowsAffected[0] === 0) {
-      return res.status(404).json({ error: "Meeting not found or already checked out." });
+    if (ownerCheck.recordset.length === 0) {
+      return res.status(403).json({ error: "Not authorized." });
     }
 
-    // log the action
+    const now = new Date();
     await pool.request()
+      .input("meetingId", sql.Int, meetingId)
+      .input("checkInTime", sql.DateTime, now)
+      .query(`
+        UPDATE Meetings
+        SET Status = 'CheckedIn', CheckInTime = @checkInTime
+        WHERE MeetingID = @meetingId
+      `);
+
+      await pool.request()
       .input("entityName", sql.NVarChar, "Meeting")
-      .input("entityId", sql.Int, parseInt(req.params.id))
-      .input("actionType", sql.NVarChar, "CheckOut")
-      .input("performedBy", sql.NVarChar, "Reception")
+      .input("entityId", sql.Int, meetingId)
+      .input("actionType", sql.NVarChar, "Approve")
+      .input("performedBy", sql.NVarChar, req.user.email)
       .query(`
         INSERT INTO AuditLogs (EntityName, EntityID, ActionType, PerformedBy)
         VALUES (@entityName, @entityId, @actionType, @performedBy)
       `);
 
-    res.json({ meetingId: parseInt(req.params.id), status: "Completed", checkOutTime: now });
+    res.json({ meetingId, status: "CheckedIn"});
+  } catch (err) {
+    console.error("Error approving meeting:", err);
+    res.status(500).json({ error: "Failed to approve meeting." });
+  }
+});
+
+
+// PUT /api/meetings/:id/checkout - mark checkout
+router.put("/:id/checkout", auth, async (req, res) => {
+  try {
+    const pool = await getPool();
+    const meetingId = parseInt(req.params.id);
+
+    const ownerCheck = await pool.request()
+      .input("meetingId", sql.Int, meetingId)
+      .input("employeeId", sql.Int, req.user.employeeId)
+      .query(`
+        SELECT MeetingID FROM Meetings 
+        WHERE MeetingID = @meetingId 
+        AND HostEmployeeID = @employeeId
+        AND Status = 'CheckedIn'
+      `);
+
+    if (ownerCheck.recordset.length === 0) {
+      return res.status(403).json({ error: "Not authorized." });
+    }
+
+    const now = new Date();
+
+    await pool.request()
+      .input("meetingId", sql.Int, meetingId)
+      .input("checkOutTime", sql.DateTime, now)
+      .query(`
+        UPDATE Meetings
+        SET CheckOutTime = @checkOutTime, Status = 'Completed'
+        WHERE MeetingID = @meetingId
+      `);
+
+
+    
+    // log the action
+    await pool.request()
+      .input("entityName", sql.NVarChar, "Meeting")
+      .input("entityId", sql.Int, meetingId)
+      .input("actionType", sql.NVarChar, "CheckOut")
+      .input("performedBy", sql.NVarChar, req.user.email)
+      .query(`
+        INSERT INTO AuditLogs (EntityName, EntityID, ActionType, PerformedBy)
+        VALUES (@entityName, @entityId, @actionType, @performedBy)
+      `);
+
+    res.json({ meetingId, status: "Completed", checkOutTime: now });
   } catch (err) {
     console.error("Error checking out:", err);
     res.status(500).json({ error: "Failed to check out." });

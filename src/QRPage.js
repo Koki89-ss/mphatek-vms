@@ -39,10 +39,10 @@ function QRPage() {
         </button>
 
         <button
-          onClick={() => navigate("/admin")}
+          onClick={() => navigate("/dashboard")}
           className="mt-2 w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-brand-grey hover:bg-gray-50"
         >
-          Admin Dashboard
+        Dashboard
         </button>
       </div>
 

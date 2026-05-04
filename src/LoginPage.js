@@ -1,8 +1,10 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
 
 export default function LoginPage({ onLogin }) {
+  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -33,6 +35,7 @@ export default function LoginPage({ onLogin }) {
       }
 
       onLogin(data);
+      navigate("/dashboard");
     } catch (err) {
       setError("Could not connect to server.");
     } finally {
@@ -45,8 +48,8 @@ export default function LoginPage({ onLogin }) {
       <img src="/mphatek-logo.png" alt="Mphatek" className="mb-8 h-14" />
 
       <div className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-lg">
-        <h2 className="mb-1 text-xl font-semibold text-brand-dark">Admin Login</h2>
-        <p className="mb-6 text-sm text-brand-grey">Sign in to access the dashboard.</p>
+        <h2 className="mb-1 text-xl font-semibold text-brand-dark">Sign In </h2>
+        <p className="mb-6 text-sm text-brand-grey">Sign in to access your dashboard.</p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1">
