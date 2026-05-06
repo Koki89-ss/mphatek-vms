@@ -1,5 +1,5 @@
 const express = require("express");
-const { sql, getPool } = require("../db");
+const pool = require("../db");
 const auth = require("../middleware/auth");
 const router = express.Router();
 
@@ -14,26 +14,25 @@ function receptionOnly(req, res, next) {
 // GET /api/reception/stats - all meetings stats
 router.get("/stats", auth, receptionOnly, async (req, res) => {
   try {
-    const pool = await getPool();
-    const result = await pool.request().query(`
+    const result = await pool.query(`
       SELECT
         (SELECT COUNT(*) FROM Meetings 
-          WHERE CAST(CheckInTime AS DATE) = CAST(GETDATE() AS DATE)
-          OR (Status = 'Pending' AND CAST(CreatedDate AS DATE) = CAST(GETDATE() AS DATE))) AS todayTotal,
+          WHERE CAST(CheckInTime AS DATE) = CURRENT_DATE
+          OR (Status = 'Pending' AND CAST(CreatedDate AS DATE) = CURRENT_DATE)) AS todayTotal,
 
         (SELECT COUNT(*) FROM Meetings 
           WHERE Status = 'Pending'
-          AND CAST(CreatedDate AS DATE) = CAST(GETDATE() AS DATE)) AS pending,
+          AND CAST(CreatedDate AS DATE) = CURRENT_DATE) AS pending,
 
         (SELECT COUNT(*) FROM Meetings 
           WHERE Status = 'CheckedIn'
-          AND CAST(CheckInTime AS DATE) = CAST(GETDATE() AS DATE)) AS checkedIn,
+          AND CAST(CheckInTime AS DATE) = CURRENT_DATE) AS checkedIn,
 
         (SELECT COUNT(*) FROM Meetings 
           WHERE Status = 'Completed'
-          AND CAST(CheckOutTime AS DATE) = CAST(GETDATE() AS DATE)) AS completed
+          AND CAST(CheckOutTime AS DATE) = CURRENT_DATE) AS completed
     `);
-    res.json(result.recordset[0]);
+    res.json(result.rows[0]);
   } catch (err) {
     console.error("Error fetching reception stats:", err);
     res.status(500).json({ error: "Failed to fetch stats." });
@@ -48,9 +47,6 @@ router.get("/meetings", auth, receptionOnly, async (req, res) => {
   console.log("Role:", req.user.role);
 
   try {
-    const pool = await getPool();
-    const request = pool.request();
-
     let query = `
       SELECT
         m.MeetingID, m.VisitorCategory, m.Purpose, m.CheckInTime, m.CheckOutTime, m.Status,
@@ -59,25 +55,32 @@ router.get("/meetings", auth, receptionOnly, async (req, res) => {
       FROM Meetings m
       JOIN Employees e ON m.HostEmployeeID = e.EmployeeID
       JOIN Locations l ON m.LocationID = l.LocationID
-      WHERE (m.IsDELETED IS NULL OR m.IsDELETED = 0)
+      WHERE (m.IsDELETED IS NULL OR m.IsDELETED = false)
     `;
 
+    const  params = [];
+    let paramIndex = 1;
+
+
     if (status) {
-      request.input("status", sql.NVarChar, status);
-      query += " AND m.Status = @status";
+      query += ` AND m.Status = $${paramIndex}`;
+      params.push(status);
+      paramIndex++;
     }
 
     if (date) {
-      request.input("date", sql.NVarChar, date);
-      query += " AND CAST(m.CreatedDate AS DATE) = @date";
-    } else {
-      query += " AND CAST(m.CreatedDate AS DATE) = CAST(GETDATE() AS DATE)";
+      query += ` AND CAST(m.CheckInTime AS DATE) = $${paramIndex}`; 
+      params.push(date);
+      paramIndex++;
+    }else{
+      query += ` AND CAST(m.CreatedDate AS DATE) = CURRENT_DATE`;
     }
+    
 
     query += " ORDER BY m.CreatedDate DESC";
 
-    const result = await request.query(query);
-    res.json(result.recordset);
+    const result = await pool.query(query, params);
+    res.json(result.rows);
   } catch (err) {
     console.error("Error fetching reception meetings:", err);
     res.status(500).json({ error: "Failed to fetch meetings." });
@@ -86,12 +89,12 @@ router.get("/meetings", auth, receptionOnly, async (req, res) => {
 
 // GET /api/reception/meetings/:id/visitors
 router.get("/meetings/:id/visitors", auth, receptionOnly, async (req, res) => {
-  try {
-    const pool = await getPool();
-    const result = await pool.request()
-      .input("meetingId", sql.Int, parseInt(req.params.id))
-      .query("SELECT * FROM Visitors WHERE MeetingID = @meetingId");
-    res.json(result.recordset);
+  try {;
+    const result = await pool.query(
+      "SELECT * FROM Visitors WHERE MeetingID = $1",
+      [parseInt(req.params.id)]
+    );
+    res.json(result.rows);
   } catch (err) {
     console.error("Error fetching visitors:", err);
     res.status(500).json({ error: "Failed to fetch visitors." });

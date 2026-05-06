@@ -1,5 +1,5 @@
 const express = require("express");
-const { sql, getPool } = require("../db");
+const pool = require("../db");
 const auth = require("../middleware/auth");
 const router = express.Router();
 
@@ -9,19 +9,16 @@ router.get("/stats", auth, async (req, res) => {
 
 
   try {
-    const pool = await getPool();
-
-    const result = await pool.request()
-      .input("employeeId", sql.Int, employeeId)
-      .query(`
+    const result = await pool.query(`
       SELECT
-        (SELECT COUNT(*) FROM Meetings WHERE CAST(CheckInTime AS DATE) = CAST(GETDATE() AS DATE) AND HostEmployeeID = @employeeId) AS todayTotal,
-        (SELECT COUNT(*) FROM Meetings WHERE CAST(CheckInTime AS DATE) = CAST(GETDATE() AS DATE) AND Status = 'CheckedIn' AND HostEmployeeID = @employeeId) AS checkedIn,
-        (SELECT COUNT(*) FROM Meetings WHERE CAST(CheckInTime AS DATE) = CAST(GETDATE() AS DATE) AND Status = 'Completed' AND HostEmployeeID = @employeeId) AS completed,
-        (SELECT COUNT(*) FROM Meetings WHERE Status = 'CheckedIn' AND DATEDIFF(HOUR, CheckInTime, GETDATE()) > 8 AND HostEmployeeID = @employeeId) AS overstayed
-    `);
+        (SELECT COUNT(*) FROM Meetings WHERE CAST(CheckInTime AS DATE) = CURRENT_DATE AND HostEmployeeID = $1) AS todayTotal,
+        (SELECT COUNT(*) FROM Meetings WHERE CAST(CheckInTime AS DATE) = CURRENT_DATE AND Status = 'CheckedIn' AND HostEmployeeID = $1) AS checkedIn,
+        (SELECT COUNT(*) FROM Meetings WHERE CAST(CheckInTime AS DATE) = CURRENT_DATE AND Status = 'Completed' AND HostEmployeeID = $1) AS completed,
+        (SELECT COUNT(*) FROM Meetings WHERE Status = 'CheckedIn' AND EXTRACT(EPOCH FROM(NOW()- CheckInTime)) /3600 > 8 AND HostEmployeeID = $1) AS overstayed
+    `, [employeeId]);
+    
 
-    res.json(result.recordset[0]);
+    res.json(result.rows[0]);
   } catch (err) {
     console.error("Error fetching stats:", err);
     res.status(500).json({ error: "Failed to fetch dashboard stats." });

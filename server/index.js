@@ -11,10 +11,10 @@ const authRouter = require("./routes/auth");
 const receptionRouter = require("./routes/reception");
 
 const app = express();
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
 
 app.use(cors({
-origin: "http://localhost:3000",
+origin: process.env.visitor-app-delta.vercel.app || "http://localhost:3000",
 methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
 allowedHeaders: ["Content-Type", "Authorization"],
 }));
@@ -34,12 +34,13 @@ app.get("/api/health", (req, res) => {
   res.json({ status: "ok" });
 });
 
-const { getPool } = require("./db");
+const pool = require("./db");
 
 app.listen(PORT, async () => {
   console.log(`Server running on http://localhost:${PORT}`);
   try {
-    await getPool();
+    await pool.connect();
+    console.log("Connected to database successfully.");
   } catch (err) {
     console.error("Failed to connect to database:", err.message);
   }
