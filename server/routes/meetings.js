@@ -41,7 +41,7 @@ router.post("/", async (req, res) => {
     for (const v of visitors) {
       await client.query(
         `INSERT INTO Visitors
-           (MeetingID, FullName, ContactNum, Email, OrganizationName, VehicleNum, IDProofType, IDProofNumber, CreatedDate)
+           (meetingid, fullname, contactnum, email, organizationname, vehiclenum, idprooftype, idproofnumber, createddate)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,  // ← changed (@param → $n)
         [
           meetingId, v.fullName, v.contactNum,
