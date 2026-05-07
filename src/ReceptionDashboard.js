@@ -200,62 +200,62 @@ export default function ReceptionDashboard({ user, onLogout }) {
                 </thead>
                 <tbody>
                   {meetings.map((m) => (
-                    <React.Fragment key={m.MeetingID}>
+                    <React.Fragment key={m.meetingid}>
                       <tr
                         className="cursor-pointer border-b border-gray-100 hover:bg-gray-50"
-                        onClick={() => toggleExpand(m.MeetingID)}
+                        onClick={() => toggleExpand(m.meetingid)}
                       >
-                        <td className="px-4 py-3 font-medium">{m.MeetingID}</td>
-                        <td className="px-4 py-3">{m.VisitorCategory}</td>
+                        <td className="px-4 py-3 font-medium">{m.meetingid}</td>
+                        <td className="px-4 py-3">{m.visitorcategory}</td>
                         <td className="px-4 py-3">
-                          <div>{m.HostName}</div>
-                          <div className="text-xs text-brand-grey">{m.Department}</div>
+                          <div>{m.hostname}</div>
+                          <div className="text-xs text-brand-grey">{m.department}</div>
                         </td>
-                        <td className="px-4 py-3">{m.LocationName}</td>
+                        <td className="px-4 py-3">{m.locationname}</td>
                         <td className="px-4 py-3">
-                          <div>{formatTime(m.CheckInTime)}</div>
-                          <div className="text-xs text-brand-grey">{formatDate(m.CheckInTime)}</div>
+                          <div>{formatTime(m.checkintime)}</div>
+                          <div className="text-xs text-brand-grey">{formatDate(m.checkintime)}</div>
                         </td>
-                        <td className="px-4 py-3">{formatTime(m.CheckOutTime)}</td>
-                        <td className="px-4 py-3">{getDuration(m.CheckInTime, m.CheckOutTime)}</td>
+                        <td className="px-4 py-3">{formatTime(m.checkouttime)}</td>
+                        <td className="px-4 py-3">{getDuration(m.checkintime, m.checkouttime)}</td>
                         <td className="px-4 py-3">
                           <span
                             className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
-                              m.Status === "Pending"
+                              m.status === "Pending"
                                 ? "bg-yellow-100 text-yellow-700"
-                                : m.Status === "CheckedIn"
+                                : m.status === "CheckedIn"
                                 ? "bg-blue-100 text-blue-700"
-                                : m.Status === "Completed"
+                                : m.status === "Completed"
                                 ? "bg-green-100 text-green-700"
                                 : "bg-gray-100 text-gray-700"
                             }`}
                           >
-                            {m.Status}
+                            {m.status}
                           </span>
                         </td>
                       </tr>
 
                       {/* Expanded visitor details */}
-                      {expandedId === m.MeetingID && (
+                      {expandedId === m.meetingid && (
                         <tr>
                           <td colSpan={8} className="bg-gray-50 px-4 py-4">
                             <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-brand-grey">
-                              Visitors for Meeting #{m.MeetingID} — {m.Purpose}
+                              Visitors for Meeting #{m.meetingid} — {m.purpose}
                             </div>
-                            {!visitors[m.MeetingID] ? (
+                            {!visitors[m.meetingid] ? (
                               <p className="text-xs text-brand-grey">Loading visitors...</p>
-                            ) : visitors[m.MeetingID].length === 0 ? (
+                            ) : visitors[m.meetingid].length === 0 ? (
                               <p className="text-xs text-brand-grey">No visitors found.</p>
                             ) : (
                               <div className="grid gap-3 md:grid-cols-2">
-                                {visitors[m.MeetingID].map((v) => (
-                                  <div key={v.VistorID} className="rounded-lg border border-gray-200 bg-white p-3 text-xs">
-                                    <div className="mb-1 font-semibold text-brand-dark">{v.FullName}</div>
-                                    <div className="text-brand-grey">{v.Email}</div>
-                                    <div className="text-brand-grey">{v.ContactNum}</div>
-                                    <div className="text-brand-grey">{v.OrganizationName}</div>
-                                    {v.VehicleNum && <div className="text-brand-grey">Vehicle: {v.VehicleNum}</div>}
-                                    {v.IDProofType && <div className="text-brand-grey">ID: {v.IDProofType} — {v.IDProofNumber}</div>}
+                                {visitors[m.meetingid].map((v) => (
+                                  <div key={v.visitorid} className="rounded-lg border border-gray-200 bg-white p-3 text-xs">
+                                    <div className="mb-1 font-semibold text-brand-dark">{v.fullname}</div>
+                                    <div className="text-brand-grey">{v.email}</div>
+                                    <div className="text-brand-grey">{v.contactnum}</div>
+                                    <div className="text-brand-grey">{v.organizationname}</div>
+                                    {v.vehiclenum && <div className="text-brand-grey">Vehicle: {v.vehiclenum}</div>}
+                                    {v.idprooftype && <div className="text-brand-grey">ID: {v.idprooftype} — {v.idproofnumber}</div>}
                                   </div>
                                 ))}
                               </div>

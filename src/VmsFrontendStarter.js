@@ -205,12 +205,12 @@ export default function VmsFrontendStarter() {
   }, []);
 
   const hostOptions = useMemo(
-    () => employees.map((e) => ({ value: String(e.EmployeeID), label: `${e.FullName} - ${e.Department}` })),
+    () => employees.map((e) => ({ value: String(e.employeeid), label: `${e.fullname} - ${e.department}` })),
     [employees]
   );
 
   const locationOptions = useMemo(
-    () => locations.map((l) => ({ value: String(l.LocationID), label: l.LocationName })),
+    () => locations.map((l) => ({ value: String(l.locationid), label: l.locationname })),
     [locations]
   );
 
