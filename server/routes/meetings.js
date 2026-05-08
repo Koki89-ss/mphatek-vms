@@ -107,8 +107,7 @@ router.get("/", auth, async (req, res) => {
       FROM Meetings m
       JOIN Employees e ON m.HostEmployeeID = e.EmployeeID
       JOIN Locations l ON m.LocationID = l.LocationID
-      WHERE m.HostEmployeeID =$1
-      AND (m.IsDeleted IS NULL OR m.IsDeleted = false)
+      WHERE m.HostEmployeeID =$
     `;
 
 

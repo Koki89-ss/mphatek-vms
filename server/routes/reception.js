@@ -55,7 +55,6 @@ router.get("/meetings", auth, receptionOnly, async (req, res) => {
       FROM Meetings m
       JOIN Employees e ON m.HostEmployeeID = e.EmployeeID
       JOIN Locations l ON m.LocationID = l.LocationID
-      WHERE (m.IsDELETED IS NULL OR m.IsDELETED = false)
     `;
 
     const  params = [];
