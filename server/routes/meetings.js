@@ -107,7 +107,7 @@ router.get("/", auth, async (req, res) => {
       FROM Meetings m
       JOIN Employees e ON m.HostEmployeeID = e.EmployeeID
       JOIN Locations l ON m.LocationID = l.LocationID
-      WHERE m.HostEmployeeID =$
+      WHERE m.HostEmployeeID =$1
     `;
 
 
