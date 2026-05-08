@@ -16,7 +16,7 @@ router.post("/login", async (req, res) => {
 
   try {
     const result = await pool.query(
-      "SELECT u.UserID, u.HostEmployeeID, e.FullName, e.Email, e.Department, u.PasswordHash, e.Role FROM Users u JOIN Employees e ON u.HostEmployeeID = e.EmployeeID WHERE e.Email = $1", 
+      "SELECT u.UserID, u.HostEmployeeID, e.FullName, e.Email, e.Department, u.PasswordHash, u.Role FROM Users u JOIN Employees e ON u.HostEmployeeID = e.EmployeeID WHERE e.Email = $1", 
       [email] 
     );
   console.log("DB result:", result.rows);
