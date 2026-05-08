@@ -16,7 +16,7 @@ router.post("/login", async (req, res) => {
 
   try {
     const result = await pool.query(
-      "SELECT u.UserID, u.EmployeeID, e.FullName, e.Email, e.Department, u.PasswordHash, e.Role FROM Users u JOIN Employees e ON u.EmployeeID = e.EmployeeID WHERE e.Email = $1", 
+      "SELECT u.UserID, u.HostEmployeeID, e.FullName, e.Email, e.Department, u.PasswordHash, e.Role FROM Users u JOIN Employees e ON u.EmployeeID = e.EmployeeID WHERE e.Email = $1", 
       [email] 
     );
   console.log("DB result:", result.rows);
@@ -33,7 +33,7 @@ router.post("/login", async (req, res) => {
     }
 
     const token = jwt.sign(
-      { userId: user.userid, employeeId: user.employeeid, email: user.email, role: user.role },
+      { userId: user.userid, employeeId: user.hostemployeeid, email: user.email, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: "8h" }
     );
@@ -44,7 +44,7 @@ router.post("/login", async (req, res) => {
       VALUES ( $1, $2, $3, $4 )
     `, ["Employee", user.employeeid, 'Login', user.email]);
 
-    res.json({employeeID: user.employeeid, fullName: user.fullname, email: user.email, department: user.department, role: user.role, token });
+    res.json({employeeID: user.hostemployeeid, fullName: user.fullname, email: user.email, department: user.department, role: user.role, token });
 
 
   } catch (err) {
