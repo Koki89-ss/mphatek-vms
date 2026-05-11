@@ -1,23 +1,28 @@
-const nodemailer = require("nodemailer");
 const pool = require("./db");
-
-// SMTP config
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || "smtp-relay.brevo.com",
-  port: Number(process.env.SMTP_PORT) || 465,
-  secure: true,
-  auth: {
-    user: process.env.SMTP_USER || "",
-    pass: process.env.SMTP_PASS || "",
-  },
-});
 
 async function sendVisitorNotification({ meetingId, hostEmail, hostName, locationName, purpose, visitors, checkInTime }) {
   const visitorNames = visitors.map((v) => v.fullName).join(", ");
   const time = new Date(checkInTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   const date = new Date(checkInTime).toLocaleDateString([], { day: "numeric", month: "long", year: "numeric" });
 
-  const html = `
+
+  try{
+    if(!process.env.BREVO_API_KEY) {
+      console.log("Breavo API key not configured-skipping email");
+      return;
+    }
+  
+    const respons= await fetch("https://api.brevo.com/v3/smtp/email", {
+      method:"POST",
+      headers: {
+        "Content-Type": "application/json",
+        "api-key": process.env.BREVO_API_KEY, 
+      },
+      body: JSON.stringify({
+        sender: { name: "Mphatek VMS", email: process.env.SMTP_USER },
+        to: [{ email: hostEmail, name: hostName }],
+        subject: `Visitor Arrival: ${visitorNames}`,
+        htmlContent: `
     <div style="font-family: Arial, sans-serif; max-width: 500px;">
       <h2 style="color: #050516;">Visitor Arrival</h2>
       <p>Hi ${hostName},</p>
@@ -31,30 +36,24 @@ async function sendVisitorNotification({ meetingId, hostEmail, hostName, locatio
       </table>
       <p style="color: #666; font-size: 12px;">Mphatek Visitor Management System</p>
     </div>
-  `;
-
-  try {
-    // only send if SMTP is configured
-    if (!process.env.SMTP_USER) {
-      console.log("SMTP not configured — skipping email to", hostEmail);
-      await logNotification(meetingId, hostEmail, "Email", "Skipped");
-      return;
-    }
-
-    await transporter.sendMail({
-      from: process.env.SMTP_USER,
-      to: hostEmail,
-      subject: `Visitor Arrival: ${visitorNames}`,
-      html,
+  `,
+      }),
     });
 
-    console.log("Notification sent to", hostEmail);
+  if (response.ok) {
+    console.log("Email sent successfully to", hostEmail);
     await logNotification(meetingId, hostEmail, "Email", "Sent");
-  } catch (err) {
-    console.error("Failed to send email:", err.message);
-    await logNotification(meetingId, hostEmail, "Email", "Failed");
+  } else {
+    const err =await response.json();
+    console.error("Brevo API error:", err);
+    await logNotification(meetingId, hostEmail, "Email", `Failed: ${err.message || response.statusText}`);
+  }
+  }catch(err) {
+    console.error("Failed to send notification:", err.message);
+    await logNotification(meetingId, hostEmail, "Email", `Failed: ${err.message}`);
   }
 }
+
 
 async function logNotification(meetingId, sentTo, channel, status) {
   try {
