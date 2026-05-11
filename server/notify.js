@@ -1,7 +1,7 @@
 const nodemailer = require("nodemailer");
-const { sql, getPool } = require("./db");
+const pool = require("./db");
 
-// SMTP config — update these with your actual mail server details
+// SMTP config
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST || "smtp.gmail.com",
   port: Number(process.env.SMTP_PORT) || 587,
@@ -58,16 +58,10 @@ async function sendVisitorNotification({ meetingId, hostEmail, hostName, locatio
 
 async function logNotification(meetingId, sentTo, channel, status) {
   try {
-    const pool = await getPool();
-    await pool.request()
-      .input("meetingId", sql.Int, meetingId)
-      .input("sentTo", sql.NVarChar, sentTo)
-      .input("channel", sql.NVarChar, channel)
-      .input("status", sql.NVarChar, status)
-      .query(`
-        INSERT INTO Notifications (MeetingID, SentTo, Channel, Status)
-        VALUES (@meetingId, @sentTo, @channel, @status)
-      `);
+    await pool.query(
+   `INSERT INTO Notifications (MeetingID, SentTo, Channel, Status)
+        VALUES ($1, $2, $3, $4)
+      `, [meetingId, sentTo, channel, status]);
   } catch (err) {
     console.error("Failed to log notification:", err.message);
   }
