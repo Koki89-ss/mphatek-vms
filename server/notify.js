@@ -59,7 +59,7 @@ async function sendVisitorNotification({ meetingId, hostEmail, hostName, locatio
 async function logNotification(meetingId, sentTo, channel, status) {
   try {
     await pool.query(
-   `INSERT INTO Notifications (MeetingID, SentTo, Channel, Status)
+   `INSERT INTO notifications_log(MeetingID, SentTo, Channel, Status)
         VALUES ($1, $2, $3, $4)
       `, [meetingId, sentTo, channel, status]);
   } catch (err) {
