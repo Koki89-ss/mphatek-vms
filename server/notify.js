@@ -34,6 +34,17 @@ async function sendVisitorNotification({ meetingId, hostEmail, hostName, locatio
         <tr><td style="padding: 8px; color: #666;">Arrival</td><td style="padding: 8px;">${time} on ${date}</td></tr>
         <tr><td style="padding: 8px; color: #666;">Meeting ID</td><td style="padding: 8px;">${meetingId}</td></tr>
       </table>
+
+      <hr style ="border: none; border-top: 1px solid  #eee; margin: 20px 0;" />
+
+      <p style="color: #666; font-size: 13px;">To approve this visit, please click the link below.</p>
+      <table style= "width: 100%; border-collapse: collapse; margin: 8px 0;">
+      <tr><td style="padding: 8px; color: #666;font-size: 13 px;" >Login link</td><td style="padding: 8px;"><a href="${FRONTEND_URL}/login" style = "color: #185FA5;">${FRONTEND_URL}/login</a></td></tr>
+       <tr><td style="padding: 8px; color: #666; font-size: 13px;">Email</td><td style="padding: 8px; font-size: 13px;">${hostEmail}</td></tr>
+      <tr><td style="padding: 8px; color: #666; font-size: 13px;">Password</td><td style="padding: 8px; font-size: 13px; font-weight: bold;">TempPassword123!</td></tr>
+    </table>
+
+
       <p style="color: #666; font-size: 12px;">Mphatek Visitor Management System</p>
     </div>
   `,
