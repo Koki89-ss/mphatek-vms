@@ -16,35 +16,36 @@ router.post("/login", async (req, res) => {
 
   try {
     const result = await pool.query(
-      "SELECT u.UserID, u.EmployeeID, e.FullName, e.Email, e.Department, u.PasswordHash, e.Role FROM Users u JOIN Employees e ON u.EmployeeID = e.EmployeeID WHERE e.Email = $1", 
-      [email] 
+      `SELECT u.UserID, u.HostEmployeeID, u.PasswordHash, u.Role, e.FullName, e.Email, e.Department FROM Users u JOIN Employees e ON u.HostEmployeeID = e.EmployeeID WHERE e.Email = $1`,
+      [email]
     );
+
   console.log("DB result:", result.rows);
+
     if (result.rows.length === 0) {
       return res.status(401).json({ error: "Invalid email or password." });
     }
 
     const user = result.rows[0];
 
-    const valid = await bcrypt.compare(password, user.PasswordHash);
+    const valid = await bcrypt.compare(password, user.passwordhash);
     if (!valid) {
       return res.status(401).json({ error: "Invalid email or password." });
     }
 
     const token = jwt.sign(
-      { userId: user.UserID, employeeId: user.EmployeeID, email: user.Email, role: user.Role },
+      { userId: user.userid, employeeId: user.hostemployeeid, email: user.email, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: "8h" }
     );
 
     // log the login action in the audit logs
-    await pool.request.query(`
-      INSERT INTO AuditLogs (EmployeeID, Action, Timestamp)
-      VALUES (${user.EmployeeID}, 'Login', CURRENT_TIMESTAMP)
-      
-      
-    res.json
-    ({EmployeeID: user.EmployeeID, FullName: user.FullName, Email: user.Email, Department: user.Department, Role: user.Role, token });
+    await pool.query(`
+      INSERT INTO AuditLogs (EntityName, EntityID, ActionType, PerformedBy)
+      VALUES ( $1, $2, $3, $4 )
+    `, ["Employee", user.hostemployeeid, 'Login', user.email]);
+
+    res.json({employeeID: user.hostemployeeid, fullName: user.fullname, email: user.email, department: user.department, role: user.role, token });
 
 
   } catch (err) {
