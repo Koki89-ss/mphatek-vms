@@ -1,4 +1,5 @@
 const pool = require("./db");
+const FRONTEND_URL = process.env.FRONTEND_URL || "https://visitor-app-delta.vercel.app";
 
 async function sendVisitorNotification({ meetingId, hostEmail, hostName, locationName, purpose, visitors, checkInTime }) {
   const visitorNames = visitors.map((v) => v.fullName).join(", ");
