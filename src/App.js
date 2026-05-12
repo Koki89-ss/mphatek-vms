@@ -35,7 +35,7 @@ function App() {
 
    function getDashboard() {
     if (!user) return <Navigate to="/login" replace />;
-    if (user.Role === "reception") {
+    if (user.role === "reception") {
       return <ReceptionDashboard user={user} onLogout={handleLogout} />;
     }
     return <AdminDashboard user={user} onLogout={handleLogout} />;

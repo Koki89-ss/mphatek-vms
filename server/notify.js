@@ -12,14 +12,14 @@ async function sendVisitorNotification({ meetingId, hostEmail, hostName, locatio
       return;
     }
   
-    const respons= await fetch("https://api.brevo.com/v3/smtp/email", {
+    const response = await fetch("https://api.brevo.com/v3/smtp/email", {
       method:"POST",
       headers: {
         "Content-Type": "application/json",
         "api-key": process.env.BREVO_API_KEY, 
       },
       body: JSON.stringify({
-        sender: { name: "Mphatek VMS", email: process.env.SMTP_USER },
+        sender: { name: "Mphatek VMS", email: "boipelokoki77@gmail.com" },
         to: [{ email: hostEmail, name: hostName }],
         subject: `Visitor Arrival: ${visitorNames}`,
         htmlContent: `
