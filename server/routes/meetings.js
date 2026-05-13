@@ -185,9 +185,9 @@ router.put("/:id/approve", auth, async (req, res) => {
     await pool.query(
       
         `UPDATE Meetings
-        SET Status = 'CheckedIn', CheckInTime = $1
-        WHERE MeetingID = $2`,
-      [now, meetingId]
+        SET Status = 'CheckedIn'
+        WHERE MeetingID = $1`,
+      [meetingId]
       );
 
       await pool.query(
