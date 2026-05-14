@@ -35,32 +35,61 @@ function PhotoCapture({ onPhotoTaken, photo }) {
 
 
 async function startCamera() {
-  try {
-    const mediaStream = await navigator.mediaDevices.getUserMedia({
-    video: { facingMode: "user"}
-  });
+  setCapturing(true);
+}   
+
+  useEffect(() => {
+    if (!ca[pturing]) return;
+
+    let activeSream = null;
+
+    async function initCamera() {
+      try {
+        const mediaStream = await navigator.mediaDevices.getUserMedia({ 
+          video: { facingMode: "user"}
+        });
+
+        activeSream = mediaStream;
+        setStream(mediaStream);
+
+        if (videoRef.current) {
+          videoRef.current.srcObject = mediaStream;
+        }
+      } catch (err) {
+        console.error("Could not access camera:", err);
+        alert("Unable to access camera. Please allow camera permissions and try again.");
+        setCapturing(false);
+      
+      }
+  }
+
+    initCamera();
+
+    return () => {
+      if (activeSream) {
+        activeSream.getTracks().forEach((track) => track.stop());
+      }
+
+    };
+
+  }, [capturing]);
+
+function takePhoto() {
 
   if (!videoRef.current) return;
 
-    videoRef.current.srcObject = mediaStream;
-    setStream(mediaStream);
-    setCapturing(true);
-    
-  } catch (err) {
-    console.error("Error accessing camera:", err);
-    alert("Camera access is required to take a photo. Please allow camera permissions and try again.");
-  }
-
-}
-
-function takePhoto() {
   const canvas = document.createElement("canvas");
   canvas.width = videoRef.current.videoWidth;
   canvas.height = videoRef.current.videoHeight;
-  canvas.getContext("2d").drawImage(videoRef.current, 0, 0);
+
+  canvas.getContext("2d")
+  ctx.drawImage(videoRef.current, 0, 0);
+
   const dataUrl = canvas.toDataURL("image/jpeg");
   onPhotoTaken(dataUrl);
+
   stream.getTracks().forEach((track) => track.stop());
+  setStream(null);
   setCapturing(false);
 
 }
@@ -68,7 +97,7 @@ function takePhoto() {
 
 function retake() {
   onPhotoTaken(null);
-  startCamera();
+  setCapturing(false);
 }
 
 
@@ -93,7 +122,7 @@ return (
 
       {capturing && (
         <div className = "text-center">
-          <video ref = {videoRef} autoPlay playsInline className = "rounded-lg w-full max-w-xs mx-auto mb-4"/>
+          <video ref = {videoRef} autoPlay playsInline muted className = "rounded-lg w-full max-w-xs mx-auto mb-4"/>
           <button
               type = "button"
               onClick = {takePhoto}
