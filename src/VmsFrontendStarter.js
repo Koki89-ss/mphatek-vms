@@ -1,8 +1,8 @@
-import React, { useEffect, useMemo, useState } from "react";
+=import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {supabase} from "./supabase";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
+const API_URL = process.env.REACT_APP_API_URL;
 
 const categories = ["Client", "Vendor", "Interview", "Delivery", "Internal Guest"];
 
@@ -30,6 +30,7 @@ function isValidPhone(phone) {
 function PhotoCapture({ onPhotoTaken, photo }) {
   // Implementation for photo capture
      const videoRef = React.useRef(null);
+
      const [stream, setStream] = useState(null);
      const [capturing, setCapturing] = useState(false)
 
@@ -57,7 +58,9 @@ async function startCamera() {
         }
       } catch (err) {
         console.error("Could not access camera:", err);
+
         alert("Unable to access camera. Please allow camera permissions and try again.");
+
         setCapturing(false);
       
       }
@@ -79,17 +82,23 @@ function takePhoto() {
   if (!videoRef.current) return;
 
   const canvas = document.createElement("canvas");
+
   canvas.width = videoRef.current.videoWidth;
   canvas.height = videoRef.current.videoHeight;
 
   const ctx = canvas.getContext("2d");
+
   ctx.drawImage(videoRef.current, 0, 0);
 
   const dataUrl = canvas.toDataURL("image/jpeg");
+
   onPhotoTaken(dataUrl);
 
-  stream.getTracks().forEach((track) => track.stop());
+  if (stream) {
+    stream.getTracks().forEach((track) => track.stop());
+  }
   setStream(null);
+
   setCapturing(false);
 
 }
@@ -97,19 +106,19 @@ function takePhoto() {
 
 function retake() {
   onPhotoTaken(null);
-  setCapturing(false);
+  startCamera();
 }
 
 
 return (
   <div className = "rounded-xl bg-white p-6 shadow-sm">
     <h2 className = "mb-4 text-sm font-semibold uppercase tracking-wide text-brand-grey">
-      Visitor Photo <span className = "text-gray-400 font-normal normal-case">(optional)</span>
+      Visitor Photo <span className = "text-gray-400 font-normal normal-case">(optional)*</span>
       </h2>
 
       {!capturing && !photo &&  (
         <div className = "text-center py-6">
-          <p className = "text-sm text-brand-grey mb-4">Take photo for identification purposes.</p>
+          <p className = "text-sm text-brand-grey mb-4">Visitor photo is required for identification purposes.</p>
           <button
              type = "button"
              onClick = {startCamera}
@@ -288,10 +297,12 @@ function SuccessScreen({ meetingId, checkInTime, onNewRegistration }) {
 }
 
 export default function VmsFrontendStarter() {
+
   const navigate = useNavigate();
 
   const [employees, setEmployees] = useState([]);
   const [locations, setLocations] = useState([]);
+  
   const [photo, setPhoto] = useState(null);
 
   const [form, setForm] = useState({
@@ -395,6 +406,8 @@ export default function VmsFrontendStarter() {
     if (!form.purpose.trim()) newErrors.purpose = "Required";
     if (!form.hostEmployeeId) newErrors.hostEmployeeId = "Required";
     if (!form.locationId) newErrors.locationId = "Required";
+    if (!photo) { newErrors.photo = "Visitor photo is required for identification purposes."; 
+    }
 
     form.visitors.forEach((v, i) => {
       if (!v.fullName.trim()) newErrors[`fullName_${i}`] = "Full name is required";
@@ -493,8 +506,10 @@ export default function VmsFrontendStarter() {
 
       const result = await response.json();
 
-      if (photo) {
-        await uploadPhoto(result.meetingId);
+      const photoUrl = await uploadPhoto(result.meetingId);
+
+      if (!photoUrl) {
+        throw new Error("Failed to upload visitor photo. Please try again.");
       }
 
       setMeetingId(result.meetingId);
@@ -623,6 +638,11 @@ export default function VmsFrontendStarter() {
 
               {/* Photo Capture */}
               <PhotoCapture onPhotoTaken={setPhoto} photo={photo} />
+              {errors.photo && (
+                <p className="mt-1 text-xs text-red-600">
+                  {errors.photo}
+                </p>
+                )}
 
             {/* Error Message */}
             {submitState.error && (
