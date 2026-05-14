@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import {supabase} from "./supabase";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
 
@@ -25,6 +26,95 @@ function isValidPhone(phone) {
   const digits = phone.replace(/[\s\-()]/g, "");
   return /^\d{7,15}$/.test(digits);
 }
+
+function PhotoCapture({ onPhotoTaken, photo }) {
+  // Implementation for photo capture
+     const videoRef = React.useRef(null);
+     const [stream, setStream] = useState(null);
+     const [capturing, setCapturing] = useState(false)
+
+
+async function startCamera() {
+  try {
+    const mediaStream = await navigator.mediaDevices.getUserMedia({ video: {facingMode:"user"} });
+    videoRef.current.srcObject = mediaStream;
+    setStream(mediaStream);
+    setCapturing(true);
+  } catch (err) {
+    console.error("Error accessing camera:", err);
+    alert("Camera access is required to take a photo. Please allow camera permissions and try again.");
+  }
+
+}
+
+function takePhoto() {
+  const canvas = document.createElement("canvas");
+  canvas.width = videoRef.current.videoWidth;
+  canvas.height = videoRef.current.videoHeight;
+  canvas.getContext("2d").drawImage(videoRef.current, 0, 0);
+  const dataUrl = canvas.toDataURL("image/jpeg");
+  onPhotoTaken(dataUrl);
+  stream.getTracks().forEach((track) => track.stop());
+  setCapturing(false);
+
+}
+
+
+function retake() {
+  onPhotoTaken(null);
+  startCamera();
+}
+
+
+return (
+  <div className = "rounded-xl bg-white p-6 shadow-sm">
+    <h2 className = "mb-4 text-sm font-semibold uppercase tracking-wide text-brand-grey">
+      Visitor Photo <span className = "text-gray-400 font-normal normal-case">(optional)</span>
+      </h2>
+
+      {!capturing && !photo &&  (
+        <div className = "text-center py-6">
+          <p className = "text-sm text-brand-grey mb-4">Take photo for identification purposes.</p>
+          <button
+             type = "button"
+             onClick = {startCamera}
+             className = "rounded-lg bg-brand-blue px-2.5 text-sm font-semibold text-white hover:bg-blue-500"
+             >
+              OpenCamera
+              </button>
+              </div> 
+      )}
+
+      {capturing && (
+        <div className = "text-center">
+          <video ref = {videoRef} autoPlay playsInline className = "rounded-lg w-full max-w-xs mx-auto mb-4"/>
+          <button
+              type = "button"
+              onClick = {takePhoto}
+              className = "rounded-lg bg-brand-dark px-5 py-2.5 text-sm font-semibold text-white hover:bg-gray-800"
+              >
+                Take Photo
+                </button>
+                </div>
+      )}
+
+      {photo && (
+        <div className = "text-center">
+          <img src = {photo} alt = "Visitor" className = "rounded-lg w-full max-w-xs mx-auto mb-4"/>
+          <button
+              type = "button"
+              onClick = {retake}
+              className = "rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-medium text-brand-gray hover:bg-gray-50"
+            >
+              Retake Photo
+            </button>
+            </div>
+      )}
+      </div>
+);
+}
+
+
 
 function InputField({ label, name, value, onChange, type = "text", required = false, placeholder = "" }) {
   return (
@@ -167,6 +257,7 @@ export default function VmsFrontendStarter() {
 
   const [employees, setEmployees] = useState([]);
   const [locations, setLocations] = useState([]);
+  const [photo, setPhoto] = useState(null);
 
   const [form, setForm] = useState({
     visitorCategory: "",
@@ -305,6 +396,26 @@ export default function VmsFrontendStarter() {
     setSubmitState({ loading: false, success: false, error: "" });
     setMeetingId(null);
     setCheckInTime(null);
+    setPhoto(null);
+  };
+
+  const uploadPhoto = async meetingId => {
+    if(!photo) return null;
+    try{
+      const base64 = photo.split(",")[1];
+      const byteArray = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+      const fileName = `visitor_${meetingId}_${Date.now()}.jpg`;
+      const {error} = await supabase.storage
+        .from("visitor-photos")
+        .upload(fileName, byteArray, {contentType: "image/jpeg"});
+      if(error) throw error;
+      const {data} = supabase.storage.from("visitor-photos").getPublicUrl(fileName);
+      return data.publicUrl;
+      } catch(err) {
+        console.error("Photo upload failed:", err);
+        return null;
+
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -346,6 +457,10 @@ export default function VmsFrontendStarter() {
       if (!response.ok) throw new Error("Failed to submit registration.");
 
       const result = await response.json();
+
+      if (photo) {
+        await uploadPhoto(result.meetingId);
+      }
 
       setMeetingId(result.meetingId);
       setCheckInTime(now);
@@ -470,6 +585,9 @@ export default function VmsFrontendStarter() {
                 ))}
               </div>
             </div>
+
+              {/* Photo Capture */}
+              <PhotoCapture onPhotoTaken={setPhoto} photo={photo} />
 
             {/* Error Message */}
             {submitState.error && (
