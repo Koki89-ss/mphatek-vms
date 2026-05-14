@@ -36,10 +36,16 @@ function PhotoCapture({ onPhotoTaken, photo }) {
 
 async function startCamera() {
   try {
-    const mediaStream = await navigator.mediaDevices.getUserMedia({ video: {facingMode:"user"} });
+    const mediaStream = await navigator.mediaDevices.getUserMedia({
+    video: { facingMode: "user"}
+  });
+
+  if (!videoRef.current) return;
+
     videoRef.current.srcObject = mediaStream;
     setStream(mediaStream);
     setCapturing(true);
+    
   } catch (err) {
     console.error("Error accessing camera:", err);
     alert("Camera access is required to take a photo. Please allow camera permissions and try again.");
