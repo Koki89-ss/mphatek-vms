@@ -713,7 +713,7 @@ export default function VmsFrontendStarter() {
                     <label className="flex items-start gap-3 cursor-pointer">
                     <input
                       type="checkbox"
-                      checked={AcceptedTerms}
+                      checked={acceptedTerms}
                       onChange={(e) => setAcceptedTerms(e.target.checked)}
                       className="mt-1 h-4 w-4 rounded border-gray-300"
                     />
