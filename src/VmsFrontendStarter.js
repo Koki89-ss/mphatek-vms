@@ -32,7 +32,7 @@ function PhotoCapture({ onPhotoTaken, photo }) {
      const videoRef = React.useRef(null);
 
      const [stream, setStream] = useState(null);
-     const [capturing, setCapturing] = useState(false)
+     const [capturing, setCapturing] = useState(false);
 
 
 async function startCamera() {
@@ -113,7 +113,7 @@ function retake() {
 return (
   <div className = "rounded-xl bg-white p-6 shadow-sm">
     <h2 className = "mb-4 text-sm font-semibold uppercase tracking-wide text-brand-grey">
-      Visitor Photo <span className = "text-gray-400 font-normal normal-case">(optional)*</span>
+      Visitor Photo <span className = "text-gray-400 font-normal normal-case">*</span>
       </h2>
 
       {!capturing && !photo &&  (
@@ -157,6 +157,39 @@ return (
       </div>
 );
 }
+
+function TermsModal({ onClose }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 px-4">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[80vh] flex flex-col">
+        <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-brand-dark">Terms & Conditions</h2>
+          <button onClick={onClose} className="text-brand-grey hover:text-brand-dark text-lg font-bold">✕</button>
+        </div>
+        <div className="overflow-y-auto px-6 py-4 text-xs text-brand-grey space-y-4 leading-relaxed">
+          <p><strong className="text-brand-dark">1. Purpose of Data Collection</strong><br />
+          Mphatek Systems collects your personal information solely for the purpose of managing visitor access to our premises.</p>
+          <p><strong className="text-brand-dark">2. Information We Collect</strong><br />
+          Full name, contact number, email address, organization name, vehicle number (optional), ID proof (optional), and photo (optional).</p>
+          <p><strong className="text-brand-dark">3. How We Use Your Information</strong><br />
+          To notify your host, manage access to our premises, and maintain a visitor log for security purposes.</p>
+          <p><strong className="text-brand-dark">4. Data Storage & Retention</strong><br />
+          Your data is stored securely and retained for 12 months from your visit date, after which it is permanently deleted.</p>
+          <p><strong className="text-brand-dark">5. Your Rights (POPIA)</strong><br />
+          You have the right to access, correct, or request deletion of your personal information. To exercise these rights contact the Mphatek Information Officer.</p>
+          <p><strong className="text-brand-dark">6. Data Security</strong><br />
+          Mphatek Systems implements appropriate measures to protect your personal information against unauthorised access.</p>
+          <p className="text-xs text-gray-400">Terms version: v1.0 | Last updated: May 2026</p>
+        </div>
+        <div className="px-6 py-4 border-t border-gray-200">
+          <button onClick={onClose} className="w-full rounded-lg bg-brand-dark px-5 py-2.5 text-sm font-semibold text-white hover:bg-gray-800">
+            Close
+           </button>
+        </div>
+      </div>
+    </div>
+  );
+} 
 
 
 
@@ -305,6 +338,10 @@ export default function VmsFrontendStarter() {
   
   const [photo, setPhoto] = useState(null);
 
+  const [showTerms, setShowTerms] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+
+
   const [form, setForm] = useState({
     visitorCategory: "",
     purpose: "",
@@ -406,11 +443,12 @@ export default function VmsFrontendStarter() {
     if (!form.purpose.trim()) newErrors.purpose = "Required";
     if (!form.hostEmployeeId) newErrors.hostEmployeeId = "Required";
     if (!form.locationId) newErrors.locationId = "Required";
-    if (!photo) { newErrors.photo = "Visitor photo is required for identification purposes."; 
-    }
+    if (!photo)  {newErrors.photo = "Visitor photo is required for identification purposes.";}
+    if (!acceptedTerms) {newErrors.terms = "You must accept the terms and conditions to proceed.";}
+    
 
     form.visitors.forEach((v, i) => {
-      if (!v.fullName.trim()) newErrors[`fullName_${i}`] = "Full name is required";
+      if (!v.fullName.trim()) {newErrors[`fullName_${i}`] = "Full name is required";}
 
       if (!v.contactNum.trim()) {
         newErrors[`contactNum_${i}`] = "Contact number is required";
@@ -445,7 +483,9 @@ export default function VmsFrontendStarter() {
     setMeetingId(null);
     setCheckInTime(null);
     setPhoto(null);
+    setAcceptedTerms(false);
   };
+
 
   const uploadPhoto = async meetingId => {
     if(!photo) return null;
@@ -512,6 +552,17 @@ export default function VmsFrontendStarter() {
         throw new Error("Failed to upload visitor photo. Please try again.");
       }
 
+      await fetch(`${API_URL}/consent`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          meetingId: result.meetingId,
+          visitorName: form.visitors[0].fullName,
+          termsVersion: "v1.0",
+        }),
+      });
+
+
       setMeetingId(result.meetingId);
       setCheckInTime(now);
       setSubmitState({ loading: false, success: true, error: "" });
@@ -560,6 +611,9 @@ export default function VmsFrontendStarter() {
             Back
           </button>
         </div>
+
+        {/* Terms & Conditions Banner */}
+        {showTerms  &&  <TermsModal onClose ={() => setShowTerms(false)} />}
 
         <form onSubmit={handleSubmit} className="space-y-6">
 
@@ -638,12 +692,42 @@ export default function VmsFrontendStarter() {
 
               {/* Photo Capture */}
               <PhotoCapture onPhotoTaken={setPhoto} photo={photo} />
-              {errors.photo && (
+              {errors.photo && 
                 <p className="mt-1 text-xs text-red-600">
                   {errors.photo}
                 </p>
-                )}
+                }
 
+                {/* Terms & Conditions */}
+                <div className="rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm text-brand-grey">
+                  <h2 className = "mb-4 text-sm font-semibold uppercase tracking-wide text-brand-grey">
+                    Terms & Conditions
+                  </h2>
+                  <button
+                    type="button"
+                    onClick={() => setShowTerms(true)}
+                    className="text-sm text-brand-blue hover:underline"
+                    >
+                    View Terms & Conditions
+                    </button>
+                    <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={AcceptedTerms}
+                      onChange={(e) => setAcceptedTerms(e.target.checked)}
+                      className="mt-1 h-4 w-4 rounded border-gray-300"
+                    />
+                    <span className="text-sm text-brand-grey">
+                I confirm I have read and accept the{" "}
+                <button type="button" onClick={() => setShowTerms(true)} className="text-brand-blue underline">
+                  Terms & Conditions
+                </button>{" "}
+                and consent to Mphatek Systems processing my personal information in accordance with POPIA.
+              </span>
+            </label>
+            {errors.terms && <p className="mt-2 text-xs text-red-600">{errors.terms}</p>}
+          </div>
+                  
             {/* Error Message */}
             {submitState.error && (
               <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
