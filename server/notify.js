@@ -3,8 +3,9 @@ const FRONTEND_URL = process.env.FRONTEND_URL || "https://visitor-app-delta.verc
 
 async function sendVisitorNotification({ meetingId, hostEmail, hostName, locationName, purpose, visitors, checkInTime }) {
   const visitorNames = visitors.map((v) => v.fullName).join(", ");
-  const time = new Date(checkInTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  const date = new Date(checkInTime).toLocaleDateString([], { day: "numeric", month: "long", year: "numeric" });
+  const time = new Date(checkInTime).toLocaleTimeString("en-ZA", { hour: "2-digit", minute: "2-digit", timeZone: "Africa/Johannesburg" });
+
+  const date = new Date(checkInTime).toLocaleDateString("en-ZA", { day: "numeric", month: "long", year: "numeric", timeZone: "Africa/Johannesburg" });
 
 
   try{
