@@ -274,7 +274,7 @@ function VisitorCard({ index, visitor, onChange, onRemove, canRemove, errors }) 
           <SelectField label="ID Proof Type" name="idProofType" value={visitor.idProofType} onChange={(e) => onChange(index, e)} options={idProofTypes.map((t) => ({ value: t, label: t }))} placeholder="Optional" />
         </div>
         <div>
-          <InputField label="ID Proof Number" name="idProofNumber" value={visitor.idProofNumber} onChange={(e) => onChange(index, e)} placeholder="Optional" />
+          <InputField label="ID Proof Number" name="idProofNumber" value={visitor.idProofNumber} onChange={(e) => onChange(index, e)} placeholder="Optional" /> {errors[`idProofNumber_${index}`] && ( <p className="mt-1 text-xs text-red-600">{errors[`idProofNumber_${index}`]}</p>)}
         </div>
       </div>
     </div>
@@ -463,6 +463,14 @@ export default function VmsFrontendStarter() {
       }
 
       if (!v.organizationName.trim()) newErrors[`organizationName_${i}`] = "Organization is required";
+
+      if(v.idproofType === "National ID") {
+        if (!v.idProofNumber.trim()) {
+          newErrors[`idProofNumber_${i}`] = "ID proof number is required"
+        } else if (!/^\d{13}$/.test(v.idProofNumber.trim())) {
+          newErrors[`idProofNumber_${i}`] = "Enter a valid 13-digit ID proof number";
+        }
+      }
     });
 
     setErrors(newErrors);
