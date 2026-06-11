@@ -16,21 +16,20 @@ router.get("/stats", auth, receptionOnly, async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT
-        (SELECT COUNT(*) FROM Meetings 
-          WHERE CAST(CheckInTime AS DATE) = CURRENT_DATE
-          OR (Status = 'Pending' AND CAST(CreatedDate AS DATE) = CURRENT_DATE)) AS todayTotal,
-
-        (SELECT COUNT(*) FROM Meetings 
+        (SELECT COUNT(*) FROM meetings 
+          WHERE CAST(CheckInTime AS DATE) = CURRENT_DATE) AS  "todayTotal",
+         
+        (SELECT COUNT(*) FROM meetings 
           WHERE Status = 'Pending'
-          AND CAST(CreatedDate AS DATE) = CURRENT_DATE) AS pending,
+          AND CAST(checkintime AS DATE) = CURRENT_DATE) AS "pending",
 
-        (SELECT COUNT(*) FROM Meetings 
-          WHERE Status = 'CheckedIn'
-          AND CAST(CheckInTime AS DATE) = CURRENT_DATE) AS checkedIn,
+        (SELECT COUNT(*) FROM meetings 
+          WHERE status = 'CheckedIn'
+          AND CAST(checkintime AS DATE) = CURRENT_DATE) AS "checkedIn",
 
-        (SELECT COUNT(*) FROM Meetings 
-          WHERE Status = 'Completed'
-          AND CAST(CheckOutTime AS DATE) = CURRENT_DATE) AS completed
+        (SELECT COUNT(*) FROM meetings 
+          WHERE status = 'Completed'
+          AND CAST(checkOutTime AS DATE) = CURRENT_DATE) AS "completed"
     `);
     res.json(result.rows[0]);
   } catch (err) {
