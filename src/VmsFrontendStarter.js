@@ -464,7 +464,7 @@ export default function VmsFrontendStarter() {
 
       if (!v.organizationName.trim()) newErrors[`organizationName_${i}`] = "Organization is required";
 
-      if(v.idproofType === "National ID") {
+      if(v.idProofType === "National ID") {
         if (!v.idProofNumber.trim()) {
           newErrors[`idProofNumber_${i}`] = "ID proof number is required"
         } else if (!/^\d{13}$/.test(v.idProofNumber.trim())) {
