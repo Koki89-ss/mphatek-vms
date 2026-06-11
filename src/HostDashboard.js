@@ -43,7 +43,7 @@ function getDuration(checkIn, checkOut) {
 
 export default function AdminDashboard({ user, onLogout }) {
   const navigate = useNavigate();
-  const [stats, setStats] = useState({ todayTotal: 0, checkedIn: 0, completed: 0, overstayed: 0 });
+  const [stats, setStats] = useState({ todayTotal: 0, pending: 0,checkedIn: 0, completed: 0, overstayed: 0 });
   const [meetings, setMeetings] = useState([]);
   const [expandedId, setExpandedId] = useState(null);
   const [visitors, setVisitors] = useState({});
@@ -191,6 +191,7 @@ export default function AdminDashboard({ user, onLogout }) {
         {/* Stats */}
         <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-4">
           <StatCard label="Today's Visitors" value={stats.todayTotal} color="text-brand-dark" />
+          <StatCard label="Pending" value={stats.pending} color="text-yellow-600" />
           <StatCard label="Checked In" value={stats.checkedIn} color="text-brand-blue" />
           <StatCard label="Completed" value={stats.completed} color="text-green-600" />
           <StatCard label="Overstayed" value={stats.overstayed} color="text-red-600" />

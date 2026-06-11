@@ -8,15 +8,33 @@ router.get("/stats", auth, async (req, res) => {
   const employeeId = req.user.employeeId; // from JWT
 
 
-  try {
+   try {
     const result = await pool.query(`
       SELECT
-        (SELECT COUNT(*) FROM Meetings WHERE CAST(CheckInTime AS DATE) = CURRENT_DATE AND HostEmployeeID = $1) AS todayTotal,
-        (SELECT COUNT(*) FROM Meetings WHERE CAST(CheckInTime AS DATE) = CURRENT_DATE AND Status = 'CheckedIn' AND HostEmployeeID = $1) AS checkedIn,
-        (SELECT COUNT(*) FROM Meetings WHERE CAST(CheckInTime AS DATE) = CURRENT_DATE AND Status = 'Completed' AND HostEmployeeID = $1) AS completed,
-        (SELECT COUNT(*) FROM Meetings WHERE Status = 'CheckedIn' AND EXTRACT(EPOCH FROM(NOW()- CheckInTime)) /3600 > 8 AND HostEmployeeID = $1) AS overstayed
+        (SELECT COUNT(*) FROM meetings 
+          WHERE hostemployeeid = $1
+          AND CAST(createddate AS DATE) = CURRENT_DATE) AS "todayTotal",
+
+        (SELECT COUNT(*) FROM meetings 
+          WHERE hostemployeeid = $1
+          AND status = 'Pending'
+          AND CAST(createddate AS DATE) = CURRENT_DATE) AS "pending",
+
+        (SELECT COUNT(*) FROM meetings 
+          WHERE hostemployeeid = $1
+          AND status = 'CheckedIn'
+          AND CAST(createddate AS DATE) = CURRENT_DATE) AS "checkedIn",
+
+        (SELECT COUNT(*) FROM meetings 
+          WHERE hostemployeeid = $1
+          AND status = 'Completed'
+          AND CAST(createddate AS DATE) = CURRENT_DATE) AS "completed",
+
+        (SELECT COUNT(*) FROM meetings 
+          WHERE hostemployeeid = $1
+          AND status = 'CheckedIn'
+          AND EXTRACT(EPOCH FROM (NOW() - checkintime)) / 3600 > 8) AS "overstayed"
     `, [employeeId]);
-    
 
     res.json(result.rows[0]);
   } catch (err) {
