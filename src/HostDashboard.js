@@ -275,7 +275,9 @@ export default function AdminDashboard({ user, onLogout }) {
                           <div>{formatTime(m.checkintime)}</div>
                           <div className="text-xs text-brand-grey">{formatDate(m.checkintime)}</div>
                         </td>
-                        <td className="px-4 py-3">{formatTime(m.checkouttime)}</td>
+                        <td className="px-4 py-3"> <div>{formatTime(m.checkouttime)} </div>
+                        <div className="text-xs text-brand-grey">{formatDate(m.checkouttime)}</div>
+                        </td>
                         <td className="px-4 py-3">{getDuration(m.checkintime, m.checkouttime)}</td>
                         <td className="px-4 py-3">
                           <span
