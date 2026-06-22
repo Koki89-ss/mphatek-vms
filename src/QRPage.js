@@ -1,5 +1,4 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
 import QRCode from "react-qr-code";
 
 function QRPage() {
@@ -30,22 +29,9 @@ function QRPage() {
         <p className="mb-4 break-all text-xs text-brand-grey">
           {registrationUrl}
         </p>
+         </div>
 
-        <button
-          onClick={() => navigate("/visitor-registration")}
-          className="mt-2 w-full rounded-lg bg-brand-blue px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-500"
-        >
-          Open Registration Form
-        </button>
-
-        <button
-          onClick={() => navigate("/dashboard")}
-          className="mt-2 w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-brand-grey hover:bg-gray-50"
-        >
-        Dashboard
-        </button>
-      </div>
-
+    
       <p className="mt-6 text-xs text-gray-400">
         Mphatek Visitor Management System
       </p>
